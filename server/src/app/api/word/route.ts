@@ -1,56 +1,85 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import Word from '@/models/Word';
+import mongoose from 'mongoose';
 
 export async function POST(req: NextRequest) {
   try {
-    await dbConnect();
+    try {
+      await dbConnect();
+    } catch (dbErr) {
+      console.warn("DB Connection failed");
+    }
+
     const { word, level } = await req.json();
 
-    // Check if word already exists in DB
-    const existingWord = await Word.findOne({ word: new RegExp(`^${word}$`, 'i'), level });
-    if (existingWord) {
-      return NextResponse.json(existingWord);
-    }
+    // 1. Try DB first
+    try {
+      if (mongoose.connection.readyState === 1) {
+        const existingWord = await Word.findOne({ word: new RegExp(`^${word}$`, 'i'), level });
+        if (existingWord) return NextResponse.json(existingWord);
+      }
+    } catch (e) {}
 
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = process.env.GROQ_API_KEY;
     if (!apiKey) {
-      return NextResponse.json({ error: 'GEMINI_API_KEY not set' }, { status: 500 });
+      return NextResponse.json({ error: 'GROQ_API_KEY not set in .env' }, { status: 500 });
     }
 
-    const systemPrompt = `You are a VocabVortex AI mentor. Create educational content for the word "${word}" at ${level} level. 
-    Return the response in JSON format:
+    const prompt = `You are a VocabVortex AI mentor. Create educational content for the word "${word}" at ${level} level. 
+    Return ONLY a valid JSON object with this exact structure:
     {
+      "word": "${word}",
+      "phonetic": "/.../",
+      "partOfSpeech": "noun/verb/adj",
+      "synonyms": ["syn1", "syn2"],
+      "antonyms": ["ant1", "ant2"],
       "story": "A 4-sentence story using the word contextually.",
       "drills": [
-        { "sentence": "A unique sentence using the word.", "explanation": "A deep insight into why this usage is effective." },
-        ... (generate 6 drills)
+        { "sentence": "A simple declarative sentence.", "explanation": "Grammar insight." },
+        { "sentence": "A question using the word.", "explanation": "Usage insight." },
+        { "sentence": "A complex sentence with a sub-clause.", "explanation": "Contextual insight." },
+        { "sentence": "An imperative or command sentence.", "explanation": "Tone insight." },
+        { "sentence": "A conditional (if...) sentence.", "explanation": "Logic insight." },
+        { "sentence": "A sentence using a synonym/variation.", "explanation": "Alternative insight." }
       ],
       "bengaliDefinition": "Bengali meaning"
     }`;
 
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
+    // Calling Groq API
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: `Generate content for: ${word}` }] }],
-        systemInstruction: { parts: [{ text: systemPrompt }] },
-        generationConfig: { responseMimeType: "application/json" }
+        model: "llama-3.3-70b-versatile",
+        messages: [
+          { role: "user", content: prompt }
+        ],
+        response_format: { type: "json_object" },
+        temperature: 0.7
       })
     });
 
     const result = await response.json();
-    const content = JSON.parse(result.candidates?.[0]?.content?.parts?.[0]?.text);
+    
+    if (!result.choices || !result.choices[0]?.message?.content) {
+      return NextResponse.json({ error: 'AI Failure' }, { status: 500 });
+    }
 
-    const newWord = await Word.create({
-      word,
-      level,
-      ...content
-    });
+    const content = JSON.parse(result.choices[0].message.content);
 
-    return NextResponse.json(newWord);
+    // 2. Save to DB if possible
+    try {
+      if (mongoose.connection.readyState === 1) {
+        await Word.create({ word, level, ...content });
+      }
+    } catch (saveErr) {}
+
+    return NextResponse.json({ ...content });
   } catch (err: any) {
-    console.error(err);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
@@ -61,6 +90,6 @@ export async function GET() {
     const words = await Word.find({}).sort({ createdAt: -1 }).limit(20);
     return NextResponse.json(words);
   } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json([]);
   }
 }

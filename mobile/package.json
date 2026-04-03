@@ -10,8 +10,10 @@
   },
   "dependencies": {
     "@expo/metro-runtime": "~4.0.1",
+    "@react-native-async-storage/async-storage": "1.23.1",
     "expo": "~52.0.31",
     "expo-status-bar": "~2.0.1",
+    "framer-motion": "^6.5.1",
     "lucide-react-native": "^1.7.0",
     "moti": "^0.30.0",
     "nativewind": "^4.2.3",
