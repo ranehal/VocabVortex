@@ -2,30 +2,60 @@ import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import Word from '@/models/Word';
 import mongoose from 'mongoose';
+import { isAuthenticated, isValidString } from '@/lib/auth';
 
+/**
+ * POST handler to generate and store educational content for a given word.
+ * Uses Groq AI to generate dictionary information and drills.
+ * 
+ * @param req The incoming Next.js POST request containing word and level.
+ * @returns A JSON response with the generated word content or an error message.
+ */
 export async function POST(req: NextRequest) {
   try {
+    // Security Measure: Validate authorization
+    if (!isAuthenticated(req)) {
+      return NextResponse.json({ error: 'Unauthorized access' }, { status: 401 });
+    }
+
+    // Connect to database with proper error handling instead of silent catch
     try {
       await dbConnect();
     } catch (dbErr) {
-      console.warn("DB Connection failed");
+      console.error("Database connection failed during POST /api/word:", dbErr);
+      // We can continue if we want to rely purely on the AI fallback, 
+      // but it's better to log the error properly.
     }
 
-    const { word, level } = await req.json();
+    // Parse the request body
+    const body = await req.json();
+    const { word, level } = body;
 
-    // 1. Try DB first
+    // Security Measure: Validate input
+    if (!isValidString(word) || !isValidString(level)) {
+       return NextResponse.json({ error: 'Invalid or missing required fields (word, level)' }, { status: 400 });
+    }
+
+    // 1. Try to find existing word in DB first to save AI API calls
     try {
       if (mongoose.connection.readyState === 1) {
-        const existingWord = await Word.findOne({ word: new RegExp(`^${word}$`, 'i'), level });
+        // Security Measure: Sanitize input for regex to prevent ReDoS
+        const sanitizedWord = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const existingWord = await Word.findOne({ word: new RegExp(`^${sanitizedWord}$`, 'i'), level });
         if (existingWord) return NextResponse.json(existingWord);
       }
-    } catch (e) {}
-
-    const apiKey = process.env.GROQ_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json({ error: 'GROQ_API_KEY not set in .env' }, { status: 500 });
+    } catch (dbReadErr) {
+      console.error("Error reading from database:", dbReadErr);
     }
 
+    // Retrieve API key securely from environment variables
+    const apiKey = process.env.GROQ_API_KEY;
+    if (!apiKey) {
+      console.error("Configuration Error: GROQ_API_KEY is not set.");
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+    }
+
+    // Construct the prompt for the AI model
     const prompt = `You are a VocabVortex AI mentor. Create educational content for the word "${word}" at ${level} level. 
     Return ONLY a valid JSON object with this exact structure:
     {
@@ -46,7 +76,7 @@ export async function POST(req: NextRequest) {
       "bengaliDefinition": "Bengali meaning"
     }`;
 
-    // Calling Groq API
+    // 2. Call the external AI API
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: { 
@@ -63,33 +93,62 @@ export async function POST(req: NextRequest) {
       })
     });
 
+    if (!response.ok) {
+      console.error("External API Error:", await response.text());
+      return NextResponse.json({ error: 'Failed to communicate with AI service' }, { status: 502 });
+    }
+
     const result = await response.json();
     
     if (!result.choices || !result.choices[0]?.message?.content) {
-      return NextResponse.json({ error: 'AI Failure' }, { status: 500 });
+      return NextResponse.json({ error: 'Invalid response from AI service' }, { status: 500 });
     }
 
+    // Parse the generated content
     const content = JSON.parse(result.choices[0].message.content);
 
-    // 2. Save to DB if possible
+    // 3. Save the newly generated content to DB for future use
     try {
       if (mongoose.connection.readyState === 1) {
         await Word.create({ word, level, ...content });
       }
-    } catch (saveErr) {}
+    } catch (saveErr) {
+      console.error("Error saving new word to database:", saveErr);
+      // We still return the content even if DB save fails
+    }
 
     return NextResponse.json({ ...content });
   } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    // Security Measure: Generic error response for unhandled exceptions
+    console.error('Word POST Error:', err);
+    return NextResponse.json({ error: 'Internal server error while processing word' }, { status: 500 });
   }
 }
 
-export async function GET() {
+/**
+ * GET handler to retrieve recent words from the database.
+ * 
+ * @param req The incoming Next.js GET request.
+ * @returns A JSON response with an array of recent words or an error message.
+ */
+export async function GET(req: NextRequest) {
   try {
+    // Security Measure: Validate authorization
+    if (!isAuthenticated(req)) {
+      return NextResponse.json({ error: 'Unauthorized access' }, { status: 401 });
+    }
+
+    // Connect to the database
     await dbConnect();
+    
+    // Fetch the 20 most recently created words
     const words = await Word.find({}).sort({ createdAt: -1 }).limit(20);
+    
     return NextResponse.json(words);
   } catch (err: any) {
-    return NextResponse.json([]);
+    // Bug Fix: Log the error and return a proper error status instead of silently returning []
+    console.error('Word GET Error:', err);
+    return NextResponse.json({ error: 'Failed to retrieve words from the database' }, { status: 500 });
   }
 }
+
