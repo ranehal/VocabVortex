@@ -1,5 +1,5 @@
 import './global.css';
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   StyleSheet, 
   Text, 
@@ -13,7 +13,7 @@ import {
   StatusBar as RNStatusBar,
   Modal,
   ActivityIndicator,
-  Canvas
+  Image
 } from 'react-native';
 import { 
   ChevronRight, 
@@ -27,19 +27,55 @@ import {
   ListPlus,
   RotateCw,
   Lightbulb,
-  Info
+  Info,
+  User as UserIcon,
+  Volume2
 } from 'lucide-react-native';
 import { MotiView, AnimatePresence } from 'moti';
 import { StatusBar } from 'expo-status-bar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as WebBrowser from 'expo-web-browser';
+import * as Google from 'expo-auth-session/providers/google';
+import * as Speech from 'expo-speech';
+
+WebBrowser.maybeCompleteAuthSession();
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const API_BASE = "http://localhost:3000"; 
 
-// --- Space Background Component (Grok Style) ---
+// --- Shooting Star Component (High Speed Streak) ---
+// Eita ekhon ekdom bijli-r moto screen cross korbe
+const ShootingStar = ({ delay = 0 }) => {
+  return (
+    <MotiView
+      from={{ 
+        left: -50, 
+        top: Math.random() * (SCREEN_HEIGHT / 3),
+        opacity: 0,
+        scaleX: 0.5
+      }}
+      animate={{ 
+        left: SCREEN_WIDTH + 50, 
+        top: SCREEN_HEIGHT * 0.7,
+        opacity: [0, 1, 1, 0],
+        scaleX: 2.5
+      }}
+      transition={{ 
+        duration: 700, 
+        loop: true, 
+        delay: 3000 + delay,
+        type: 'timing',
+        repeatReverse: false
+      }}
+      style={styles.shootingStarLine}
+    />
+  );
+};
+
 const StarField = () => {
   return (
     <View style={[StyleSheet.absoluteFill, { backgroundColor: '#000' }]}>
-      {[...Array(80)].map((_, i) => (
+      {[...Array(40)].map((_, i) => (
         <MotiView
           key={i}
           from={{ opacity: 0.2 }}
@@ -49,50 +85,39 @@ const StarField = () => {
             position: 'absolute',
             top: Math.random() * SCREEN_HEIGHT,
             left: Math.random() * SCREEN_WIDTH,
-            width: Math.random() * 2 + 1,
-            height: Math.random() * 2 + 1,
+            width: 2,
+            height: 2,
             backgroundColor: '#fff',
             borderRadius: 1,
           }}
         />
       ))}
-      <MotiView
-        from={{ translateX: -100, translateY: 0, opacity: 1 }}
-        animate={{ translateX: SCREEN_WIDTH + 100, translateY: SCREEN_HEIGHT * 0.5, opacity: 0 }}
-        transition={{ duration: 1500, loop: true, repeatReverse: false, delay: 5000, type: 'timing' }}
-        style={{
-          position: 'absolute',
-          top: 50,
-          left: 0,
-          width: 100,
-          height: 2,
-          backgroundColor: 'rgba(255,255,255,0.4)',
-          transform: [{ rotate: '30deg' }]
-        }}
-      />
+      <ShootingStar delay={0} />
+      <ShootingStar delay={4500} />
+      <ShootingStar delay={9000} />
     </View>
   );
 };
 
 const themes = {
-  amoled: { name: 'Space AMOLED', bg: '#000000', card: 'rgba(20, 20, 25, 0.6)', accent: '#3b82f6', text: '#ffffff', subText: '#60a5fa', isSpace: true },
-  verdant: { name: 'Verdant Luxe', bg: '#051c14', card: 'rgba(6, 78, 59, 0.3)', accent: '#10b981', text: '#ecfdf5', subText: '#34d399' },
-  crimson: { name: 'Crimson Royal', bg: '#1a0505', card: 'rgba(153, 27, 27, 0.3)', accent: '#dc2626', text: '#fef2f2', subText: '#f87171' },
-  onyx: { name: 'Pure Onyx', bg: '#000000', card: 'rgba(39, 39, 42, 0.5)', accent: '#f4f4f5', text: '#f4f4f5', subText: '#71717a' },
+  amoled: { name: 'Space AMOLED', bg: '#000000', card: 'rgba(20, 20, 25, 0.7)', accent: '#3b82f6', text: '#ffffff', subText: '#60a5fa', isSpace: true },
+  verdant: { name: 'Verdant Luxe', bg: '#051c14', card: 'rgba(6, 78, 59, 0.4)', accent: '#10b981', text: '#ecfdf5', subText: '#34d399' },
+  crimson: { name: 'Crimson Royal', bg: '#1a0505', card: 'rgba(153, 27, 27, 0.4)', accent: '#dc2626', text: '#fef2f2', subText: '#f87171' },
+  onyx: { name: 'Pure Onyx', bg: '#000000', card: 'rgba(39, 39, 42, 0.6)', accent: '#f4f4f5', text: '#f4f4f5', subText: '#71717a' },
   white: { name: 'Pure White', bg: '#f8fafc', card: '#ffffff', accent: '#2563eb', text: '#0f172a', subText: '#64748b' }
 };
 
 const levels = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2', 'IELTS', 'TOEFL', 'GRE'];
 
 const levelWordsMap = {
-  'A1': ['Apple', 'Water', 'Friend', 'School', 'Happy', 'Small', 'Run'],
-  'A2': ['Village', 'Journey', 'Kitchen', 'Famous', 'Simple', 'Advice'],
-  'B1': ['Confident', 'Opportunity', 'Manage', 'Product', 'Success'],
-  'B2': ['Analyze', 'Challenge', 'Distinct', 'Flexible', 'Observe'],
+  'A1': ['Apple', 'Water', 'Friend', 'School', 'Happy'],
+  'A2': ['Village', 'Journey', 'Kitchen', 'Famous', 'Simple'],
+  'B1': ['Confident', 'Opportunity', 'Manage', 'Product', 'Discuss'],
+  'B2': ['Analyze', 'Challenge', 'Consequence', 'Distinct', 'Flexible'],
   'C1': ['Acquaint', 'Beneficial', 'Coherent', 'Elaborate', 'Hypothesis'],
   'C2': ['Aesthetic', 'Benevolent', 'Conundrum', 'Epiphany', 'Ineffable'],
-  'IELTS': ['Mitigate', 'Substantial', 'Paradigm', 'Advocate', 'Viable'],
-  'TOEFL': ['Biodiversity', 'Stratosphere', 'Chronological', 'Symmetry'],
+  'IELTS': ['Mitigate', 'Correlation', 'Substantial', 'Paradigm', 'Advocate'],
+  'TOEFL': ['Interdependence', 'Biodiversity', 'Sediment', 'Stratosphere', 'Chronological'],
   'GRE': ['Alacrity', 'Bellicose', 'Capricious', 'Ephemeral', 'Loquacious']
 };
 
@@ -107,13 +132,79 @@ export default function App() {
   const [suggestions, setSuggestions] = useState([]);
   const [selectedWordData, setSelectedWordData] = useState(null);
   const [tappingLoading, setTappingLoading] = useState(false);
+  
+  const [user, setUser] = useState(null);
   const [bookmarks, setBookmarks] = useState([]);
   const [learned, setLearned] = useState([]);
 
+  const [request, response, promptAsync] = Google.useAuthRequest({
+    androidClientId: "YOUR_ANDROID_CLIENT_ID",
+    iosClientId: "YOUR_IOS_CLIENT_ID",
+    webClientId: "YOUR_WEB_CLIENT_ID",
+  });
+
   const activeTheme = themes[themeKey];
 
-  useEffect(() => { loadProgress(); }, []);
+  useEffect(() => { loadLocalData(); }, []);
+  useEffect(() => {
+    if (response?.type === 'success') {
+      const { authentication } = response;
+      getUserInfo(authentication.accessToken);
+    }
+  }, [response]);
   useEffect(() => { refreshSuggestions(level); }, [level]);
+
+  const speak = (word) => {
+    if (!word) return;
+    Speech.speak(word, { language: 'en-US', pitch: 1.0, rate: 0.9 });
+  };
+
+  const getUserInfo = async (token) => {
+    try {
+      const res = await fetch('https://www.googleapis.com/userinfo/v2/me', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const userInfo = await res.json();
+      setUser(userInfo);
+      await AsyncStorage.setItem('vortex_user', JSON.stringify(userInfo));
+      syncWithBackend(userInfo);
+    } catch (e) { console.error(e); }
+  };
+
+  const syncWithBackend = async (userData) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/user`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: userData.email,
+          name: userData.name,
+          picture: userData.picture,
+          googleId: userData.id,
+          bookmarks,
+          learned
+        })
+      });
+      const data = await res.json();
+      if (data.bookmarks) setBookmarks(data.bookmarks);
+      if (data.learned) setLearned(data.learned);
+    } catch (e) { console.warn("Sync failed"); }
+  };
+
+  const loadLocalData = async () => {
+    try {
+      const u = await AsyncStorage.getItem('vortex_user');
+      const b = await AsyncStorage.getItem('vortex_bookmarks');
+      const l = await AsyncStorage.getItem('vortex_learned');
+      if (u) {
+        const parsedUser = JSON.parse(u);
+        setUser(parsedUser);
+        syncWithBackend(parsedUser);
+      }
+      if (b) setBookmarks(JSON.parse(b));
+      if (l) setLearned(JSON.parse(l));
+    } catch (e) {}
+  };
 
   const refreshSuggestions = (currentLevel) => {
     const list = levelWordsMap[currentLevel || level];
@@ -126,19 +217,11 @@ export default function App() {
     return words[new Date().getDay() % words.length];
   }, []);
 
-  const loadProgress = async () => {
-    try {
-      const b = await AsyncStorage.getItem('vortex_bookmarks');
-      const l = await AsyncStorage.getItem('vortex_learned');
-      if (b) setBookmarks(JSON.parse(b));
-      if (l) setLearned(JSON.parse(l));
-    } catch (e) {}
-  };
-
-  const saveProgress = async (newB, newL) => {
+  const saveLocalProgress = async (newB, newL) => {
     try {
       await AsyncStorage.setItem('vortex_bookmarks', JSON.stringify(newB));
       await AsyncStorage.setItem('vortex_learned', JSON.stringify(newL));
+      if (user) syncWithBackend(user);
     } catch (e) {}
   };
 
@@ -147,7 +230,7 @@ export default function App() {
     if (!bookmarks.includes(cleanWord) && !learned.includes(cleanWord)) {
       const next = [...bookmarks, cleanWord];
       setBookmarks(next);
-      saveProgress(next, learned);
+      saveLocalProgress(next, learned);
     }
     setSelectedWordData(null);
   };
@@ -157,7 +240,14 @@ export default function App() {
     const newL = [...learned, word];
     setBookmarks(newB);
     setLearned(newL);
-    saveProgress(newB, newL);
+    saveLocalProgress(newB, newL);
+  };
+
+  const logout = async () => {
+    await AsyncStorage.removeItem('vortex_user');
+    setUser(null);
+    setBookmarks([]);
+    setLearned([]);
   };
 
   const handleStart = async (wordToUse) => {
@@ -167,7 +257,7 @@ export default function App() {
     setCurrentView('reading');
     setSelectedWordData(null);
     try {
-      const response = await fetch('http://localhost:3000/api/word', {
+      const response = await fetch(`${API_BASE}/api/word`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ word, level })
@@ -175,7 +265,7 @@ export default function App() {
       const data = await response.json();
       setCurrentStory(data);
     } catch (err) {
-      setCurrentStory({ word, story: "Error loading vortex content. Is server running?", phonetic: "/error/" });
+      setCurrentStory({ word, story: "Vortex logic fail korsi... server check koren.", phonetic: "/err/" });
     } finally {
       setLoading(false);
       setInputWord('');
@@ -186,7 +276,7 @@ export default function App() {
     const cleanWord = word.replace(/[.,!?;:]/g, '').trim();
     setTappingLoading(true);
     try {
-      const response = await fetch('http://localhost:3000/api/word', {
+      const response = await fetch(`${API_BASE}/api/word`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ word: cleanWord, level })
@@ -194,7 +284,7 @@ export default function App() {
       const data = await response.json();
       setSelectedWordData(data);
     } catch (err) {
-      setSelectedWordData({ word: cleanWord, bengaliDefinition: "Detail Load Error", drills: [] });
+      setSelectedWordData({ word: cleanWord, bengaliDefinition: "Detail load error", drills: [] });
     } finally {
       setTappingLoading(false);
     }
@@ -216,6 +306,15 @@ export default function App() {
             <Text style={[styles.title, { color: activeTheme.text }]}>VOCAB<Text style={{ color: activeTheme.subText }}>VORTEX</Text></Text>
           </MotiView>
           <View style={styles.headerButtons}>
+            {user ? (
+              <TouchableOpacity onPress={() => logout()} style={[styles.iconButton, { backgroundColor: activeTheme.card }]}>
+                <Image source={{ uri: user.picture }} style={{ width: 24, height: 24, borderRadius: 12 }} />
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity onPress={() => promptAsync()} style={[styles.iconButton, { backgroundColor: activeTheme.card }]}>
+                <UserIcon size={20} color={activeTheme.text} />
+              </TouchableOpacity>
+            )}
             <TouchableOpacity onPress={() => setShowThemePicker(true)} style={[styles.iconButton, { backgroundColor: activeTheme.card }]}><Palette size={20} color={activeTheme.text} /></TouchableOpacity>
           </View>
         </View>
@@ -224,7 +323,7 @@ export default function App() {
           <AnimatePresence exitBeforeEnter>
             {currentView === 'home' && (
               <MotiView key="home" from={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} style={styles.viewContainer}>
-                <View style={[styles.heroCard, { backgroundColor: activeTheme.card, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' }]}>
+                <View style={[styles.heroCard, { backgroundColor: activeTheme.card }]}>
                   <Text style={[styles.heroTitle, { color: activeTheme.text }]}>Step into{"\n"}<Text style={{ color: activeTheme.subText }}>the Vortex</Text></Text>
                   
                   <View style={styles.levelRow}>
@@ -251,7 +350,11 @@ export default function App() {
                     <TouchableOpacity onPress={() => handleStart()} style={[styles.exploreBtn, { backgroundColor: activeTheme.accent }]}><ChevronRight size={24} color="#fff" /></TouchableOpacity>
                   </View>
 
-                  <TouchableOpacity onPress={() => setInputWord(wordOfTheDay)} style={styles.wodBtn}><Sparkles size={14} color={activeTheme.subText} /><Text style={styles.wodText}>WORD OF DAY: <Text style={{ textDecorationLine: 'underline' }}>{wordOfTheDay}</Text></Text></TouchableOpacity>
+                  {!user && (
+                    <TouchableOpacity onPress={() => promptAsync()} style={styles.loginBanner}>
+                      <Text style={{ color: activeTheme.subText, fontSize: 10, fontWeight: '900' }}>SIGN IN WITH GOOGLE TO SYNC PROGRESS</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
 
                 <View style={[styles.dashboardCard, { backgroundColor: activeTheme.card }]}>
@@ -271,11 +374,19 @@ export default function App() {
             {currentView === 'reading' && (
               <MotiView key="reading" from={{ opacity: 0 }} animate={{ opacity: 1 }} style={styles.viewContainer}>
                 {loading ? (
-                  <View style={styles.loader}><RotateCw size={40} color={activeTheme.accent} /><Text style={[styles.loaderText, { color: activeTheme.text, marginTop: 20 }]}>GENERATING VORTEX...</Text></View>
+                  <View style={styles.loader}><RotateCw size={40} color={activeTheme.accent} /><Text style={[styles.loaderText, { color: activeTheme.text, marginTop: 20 }]}>BREWING THE VORTEX...</Text></View>
                 ) : (
                   <View style={styles.resultStack}>
                     <View style={[styles.dictionaryHeader, { backgroundColor: activeTheme.card }]}>
-                      <View style={styles.dictTop}><Text style={[styles.dictWord, { color: activeTheme.text }]}>{currentStory?.word}</Text><TouchableOpacity onPress={() => addBookmark(currentStory?.word)}><Bookmark size={24} color={activeTheme.accent} /></TouchableOpacity></View>
+                      <View style={styles.dictTop}>
+                        <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                          <Text style={[styles.dictWord, { color: activeTheme.text }]}>{currentStory?.word}</Text>
+                          <TouchableOpacity onPress={() => speak(currentStory?.word)} style={styles.speakerBtn}>
+                            <Volume2 size={24} color={activeTheme.accent} />
+                          </TouchableOpacity>
+                        </View>
+                        <TouchableOpacity onPress={() => addBookmark(currentStory?.word)}><Bookmark size={24} color={activeTheme.accent} /></TouchableOpacity>
+                      </View>
                       <Text style={[styles.dictPhonetic, { color: activeTheme.subText }]}>{currentStory?.phonetic} • {currentStory?.partOfSpeech}</Text>
                       <Text style={[styles.dictBengali, { color: activeTheme.text }]}>{currentStory?.bengaliDefinition}</Text>
                     </View>
@@ -301,7 +412,10 @@ export default function App() {
 
             {currentView === 'dashboard' && (
               <MotiView key="dashboard" from={{ opacity: 0, x: 100 }} animate={{ opacity: 1, x: 0 }} style={styles.viewContainer}>
-                 <Text style={[styles.heroTitle, { color: activeTheme.text }]}>Learning <Text style={{ color: activeTheme.subText }}>Queue</Text></Text>
+                 <View style={styles.dashboardProfile}>
+                    {user && <Image source={{ uri: user.picture }} style={styles.profilePic} />}
+                    <Text style={[styles.heroTitle, { color: activeTheme.text, fontSize: 24 }]}>{user ? `Hi, ${user.given_name}` : "Your"} <Text style={{ color: activeTheme.subText }}>Vortex</Text></Text>
+                 </View>
                  <ScrollView style={styles.listScroll}>
                    {bookmarks.length === 0 ? <Text style={{ color: activeTheme.text, opacity: 0.3, textAlign: 'center', marginTop: 100 }}>QUEUE EMPTY</Text> : bookmarks.map((w, i) => (
                      <View key={i} style={[styles.listItem, { backgroundColor: activeTheme.card }]}>
@@ -323,7 +437,7 @@ export default function App() {
         </View>
       </SafeAreaView>
 
-      {/* Popups */}
+      {/* Word Insight Modal */}
       <Modal visible={!!selectedWordData || tappingLoading} transparent animationType="slide">
         <View style={styles.modalOverlay}>
            <MotiView from={{ translateY: 300, opacity: 0 }} animate={{ translateY: 0, opacity: 1 }} style={[styles.detailModal, { backgroundColor: '#0a0a0a', borderColor: activeTheme.accent }]}>
@@ -332,19 +446,33 @@ export default function App() {
               ) : (
                 <ScrollView showsVerticalScrollIndicator={false}>
                   <View style={styles.modalHeaderInner}>
-                    <View><Text style={[styles.modalWord, { color: '#fff' }]}>{selectedWordData?.word}</Text><Text style={[styles.modalPhonetic, { color: activeTheme.subText }]}>{selectedWordData?.phonetic} • {selectedWordData?.partOfSpeech}</Text></View>
+                    <View>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                        <Text style={[styles.modalWord, { color: '#fff' }]}>{selectedWordData?.word}</Text>
+                        <TouchableOpacity onPress={() => speak(selectedWordData?.word)} style={styles.modalSpeakerBtn}>
+                          <Volume2 size={32} color={activeTheme.accent} />
+                        </TouchableOpacity>
+                      </View>
+                      <Text style={[styles.modalPhonetic, { color: activeTheme.subText }]}>{selectedWordData?.phonetic} • {selectedWordData?.partOfSpeech}</Text>
+                    </View>
                     <TouchableOpacity onPress={() => setSelectedWordData(null)} style={styles.modalClose}><X size={24} color="#fff"/></TouchableOpacity>
                   </View>
-                  <View style={[styles.modalMeaningCard, { backgroundColor: 'rgba(255,255,255,0.05)' }]}><Text style={[styles.modalMeaning, { color: '#fff' }]}>{selectedWordData?.bengaliDefinition}</Text></View>
+                  
+                  <View style={[styles.modalMeaningCard, { backgroundColor: 'rgba(255,255,255,0.08)' }]}><Text style={[styles.modalMeaning, { color: '#fff' }]}>{selectedWordData?.bengaliDefinition}</Text></View>
+                  
                   <View style={styles.drillSection}>
                     <View style={styles.sectionLabel}><Lightbulb size={16} color={activeTheme.accent} /><Text style={[styles.sectionLabelText, { color: activeTheme.accent }]}>6 CONTEXTUAL DRILLS</Text></View>
                     {selectedWordData?.drills?.map((drill, i) => (
                       <View key={i} style={[styles.drillCard, { borderLeftColor: activeTheme.accent }]}>
                         <Text style={[styles.drillSentence, { color: '#fff' }]}>{drill.sentence}</Text>
-                        <View style={styles.drillExplanationRow}><Info size={12} color={activeTheme.subText}/><Text style={styles.drillExplanation}>{drill.explanation}</Text></View>
+                        <View style={styles.drillExplanationRow}>
+                          <Info size={14} color={activeTheme.subText}/>
+                          <Text style={[styles.drillExplanation, { color: '#bbb' }]}>{drill.explanation}</Text>
+                        </View>
                       </View>
                     ))}
                   </View>
+
                   <View style={styles.modalActions}>
                     <TouchableOpacity onPress={() => handleStart(selectedWordData?.word)} style={[styles.modalBtn, { backgroundColor: activeTheme.accent }]}><Zap size={18} color="#fff" /><Text style={styles.modalBtnText}>START VORTEX</Text></TouchableOpacity>
                     <TouchableOpacity onPress={() => addBookmark(selectedWordData?.word)} style={[styles.modalBtn, { backgroundColor: 'rgba(255,255,255,0.1)' }]}><Bookmark size={18} color="#fff" /><Text style={[styles.modalBtnText, { color: '#fff' }]}>BOOKMARK</Text></TouchableOpacity>
@@ -376,10 +504,18 @@ export default function App() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  shootingStarLine: {
+    position: 'absolute',
+    width: 120,
+    height: 2,
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    transform: [{ rotate: '35deg' }],
+    borderRadius: 1,
+  },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 24, paddingTop: Platform.OS === 'android' ? RNStatusBar.currentHeight + 20 : 20 },
   title: { fontSize: 24, fontWeight: '900', letterSpacing: -1 },
   headerButtons: { flexDirection: 'row', gap: 10 },
-  iconButton: { padding: 12, borderRadius: 16 },
+  iconButton: { padding: 12, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
   scrollContent: { paddingBottom: 120 },
   viewContainer: { padding: 24 },
   heroCard: { borderRadius: 32, padding: 32, marginBottom: 20 },
@@ -396,8 +532,7 @@ const styles = StyleSheet.create({
   inputWrapper: { flexDirection: 'row', gap: 10, marginBottom: 20 },
   input: { flex: 1, borderRadius: 20, paddingHorizontal: 20, height: 60, fontSize: 16, fontWeight: '700' },
   exploreBtn: { width: 60, height: 60, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
-  wodBtn: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  wodText: { fontSize: 10, fontWeight: '900', opacity: 0.5 },
+  loginBanner: { marginTop: 10, opacity: 0.5 },
   dashboardCard: { borderRadius: 32, padding: 24 },
   dashboardHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 20 },
   dashboardTitle: { fontSize: 10, fontWeight: '900', letterSpacing: 2 },
@@ -415,6 +550,7 @@ const styles = StyleSheet.create({
   dictionaryHeader: { borderRadius: 32, padding: 32 },
   dictTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
   dictWord: { fontSize: 40, fontWeight: '900', letterSpacing: -1 },
+  speakerBtn: { padding: 8, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 12 },
   dictPhonetic: { fontSize: 14, fontWeight: '700', marginBottom: 20 },
   dictBengali: { fontSize: 32, fontWeight: '900' },
   storySection: { borderRadius: 32, padding: 32 },
@@ -426,11 +562,14 @@ const styles = StyleSheet.create({
   nextBtnText: { color: '#fff', fontWeight: '900', letterSpacing: 2 },
   bottomNav: { position: 'absolute', bottom: 30, left: 24, right: 24 },
   navContainer: { flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', paddingVertical: 20, borderRadius: 32 },
+  dashboardProfile: { flexDirection: 'row', alignItems: 'center', gap: 15, marginBottom: 30 },
+  profilePic: { width: 50, height: 50, borderRadius: 25, borderWidth: 2, borderColor: '#fff' },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.95)', justifyContent: 'flex-end' },
   detailModal: { height: '90%', borderTopLeftRadius: 40, borderTopRightRadius: 40, padding: 32, borderWidth: 1 },
   modalLoader: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   modalHeaderInner: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 30 },
   modalWord: { fontSize: 48, fontWeight: '900', letterSpacing: -2 },
+  modalSpeakerBtn: { padding: 10, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 16 },
   modalPhonetic: { fontSize: 16, fontWeight: '700' },
   modalClose: { padding: 8, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 12 },
   modalMeaningCard: { padding: 24, borderRadius: 24, marginBottom: 32 },
@@ -438,8 +577,8 @@ const styles = StyleSheet.create({
   drillSection: { gap: 16, marginBottom: 40 },
   drillCard: { padding: 20, backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 20, borderLeftWidth: 4 },
   drillSentence: { fontSize: 18, fontWeight: '700', marginBottom: 8, lineHeight: 24 },
-  drillExplanationRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  drillExplanation: { fontSize: 12, opacity: 0.5, fontStyle: 'italic' },
+  drillExplanationRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+  drillExplanation: { fontSize: 13, flex: 1, lineHeight: 18 },
   modalActions: { flexDirection: 'row', gap: 12, paddingBottom: 20 },
   modalBtn: { flex: 1, height: 60, borderRadius: 20, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 10 },
   modalBtnText: { fontWeight: '900', fontSize: 12, letterSpacing: 1 },
