@@ -921,38 +921,78 @@ useEffect(() => {
             {currentView === 'dashboard' && (
               <MotiView key="dashboard" from={{ opacity: 0, x: 100 }} animate={{ opacity: 1, x: 0 }} style={styles.viewContainer}>
 
-                 <Text style={[styles.heroTitle, { color: activeTheme.text }]}>Learning <Text style={{ color: activeTheme.subText }}>Queue</Text></Text>
-                 <View style={{ marginBottom: 20 }}>
-  <Text style={{ color: activeTheme.text, fontSize: 18, fontWeight: 'bold' }}>
-    👤 {userName || "Guest"}
-  </Text>
-  <Text style={{ color: activeTheme.subText, fontSize: 14 }}>
-    🎂 Age: {userAge || "N/A"}
-  </Text>
+                 <View style={{ marginBottom: 60 }}>
+
+  {/* COVER */}
+  <View style={{
+    height: 120,
+    backgroundColor: activeTheme.accent,
+    borderRadius: 20
+  }} />
+
+  {/* AVATAR */}
+  <View style={{
+    position: 'absolute',
+    top: 70,
+    alignSelf: 'center',
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#111',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 3,
+    borderColor: '#000'
+  }}>
+    <Text style={{ fontSize: 30 }}>👤</Text>
+  </View>
+
 </View>
 
+{/* NAME + AGE */}
+<View style={{ alignItems: 'center', marginBottom: 20 }}>
 
-<TouchableOpacity
-  onPress={() => {
-    setShowResetConfirm(true);   // ✅ ONLY OPEN MODAL
-  }}
-  style={{
-    marginBottom: 100,
-    backgroundColor: '#dc2626',
-    padding: 14,
-    borderRadius: 12,
-    alignItems: 'center'
-  }}
->
-  <Text style={{ color: '#fff', fontWeight: 'bold' }}>
-    🔄 Reset Profile
+  <Text style={{
+    color: activeTheme.text,
+    fontSize: 20,
+    fontWeight: 'bold'
+  }}>
+    {userName || "Guest"}
   </Text>
-</TouchableOpacity>
 
-                 <View style={styles.dashboardProfile}>
-                    {user && <Image source={{ uri: user.picture }} style={styles.profilePic} />}
-                    <Text style={[styles.heroTitle, { color: activeTheme.text, fontSize: 24 }]}>{user ? `Hi, ${user.given_name}` : "Your"} <Text style={{ color: activeTheme.subText }}>Vortex</Text></Text>
-                 </View>
+  <Text style={{
+    color: activeTheme.subText,
+    fontSize: 14
+  }}>
+    Age: {userAge || "N/A"}
+  </Text>
+
+</View>
+
+{/* ACTION BUTTONS */}
+<View style={{
+  flexDirection: 'row',
+  justifyContent: 'center',
+  gap: 10,
+  marginBottom: 20
+}}>
+
+  <TouchableOpacity
+    onPress={() => setShowResetConfirm(true)}
+    style={{
+      backgroundColor: '#dc2626',
+      paddingHorizontal: 20,
+      paddingVertical: 10,
+      borderRadius: 10
+    }}
+  >
+    <Text style={{ color: '#fff', fontWeight: 'bold' }}>
+      Reset
+    </Text>
+  </TouchableOpacity>
+
+</View>
+
                  <ScrollView style={styles.listScroll}>
                    {bookmarks.length === 0 ? <Text style={{ color: activeTheme.text, opacity: 0.3, textAlign: 'center', marginTop: 100 }}>QUEUE EMPTY</Text> : bookmarks.map((w, i) => (
                      <View key={i} style={[styles.listItem, { backgroundColor: activeTheme.card }]}>
