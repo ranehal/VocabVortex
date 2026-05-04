@@ -50,32 +50,32 @@ const API_BASE = "http://localhost:3000";
 
 // --- Shooting Star Component (High Speed Streak) ---
 // Eita ekhon ekdom bijli-r moto screen cross korbe
-const ShootingStar = ({ delay = 0 }) => {
-  return (
-    <MotiView
-      from={{ 
-        left: -50, 
-        top: Math.random() * (SCREEN_HEIGHT / 3),
-        opacity: 0,
-        scaleX: 0.5
-      }}
-      animate={{ 
-        left: SCREEN_WIDTH + 50, 
-        top: SCREEN_HEIGHT * 0.7,
-        opacity: [0, 1, 1, 0],
-        scaleX: 2.5
-      }}
-      transition={{ 
-        duration: 700, 
-        loop: true, 
-        delay: 3000 + delay,
-        type: 'timing',
-        repeatReverse: false
-      }}
-      style={styles.shootingStarLine}
-    />
-  );
-};
+// const ShootingStar = ({ delay = 0 }) => {
+//   return (
+//     <MotiView
+//       from={{ 
+//         left: -50, 
+//         top: Math.random() * (SCREEN_HEIGHT / 3),
+//         opacity: 0,
+//         scaleX: 0.5
+//       }}
+//       animate={{ 
+//         left: SCREEN_WIDTH + 50, 
+//         top: SCREEN_HEIGHT * 0.7,
+//         opacity: [0, 1, 1, 0],
+//         scaleX: 2.5
+//       }}
+//       transition={{ 
+//         duration: 700, 
+//         loop: true, 
+//         delay: 3000 + delay,
+//         type: 'timing',
+//         repeatReverse: false
+//       }}
+//       style={styles.shootingStarLine}
+//     />
+//   );
+// };
 
 const StarField = () => {
   return (
@@ -97,9 +97,9 @@ const StarField = () => {
           }}
         />
       ))}
-      <ShootingStar delay={0} />
-      <ShootingStar delay={4500} />
-      <ShootingStar delay={9000} />
+      {/* <ShootingStar delay={0} />
+      <ShootingStar delay={4500} /> //Shooting start problem so not added now
+      <ShootingStar delay={9000} /> */}
     </View>
   );
 };
