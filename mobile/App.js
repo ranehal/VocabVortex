@@ -1,24 +1,27 @@
 import './global.css';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { 
-  StyleSheet, 
-  Text, 
-  View, 
-  TouchableOpacity, 
-  TextInput, 
-  ScrollView, 
-  SafeAreaView, 
+import {
+  StyleSheet,
+  Text,
+  View,
+  TouchableOpacity,
+  TextInput,
+  ScrollView,
+  SafeAreaView,
   Dimensions,
   Platform,
   StatusBar as RNStatusBar,
   Modal,
   ActivityIndicator,
   Canvas,
-  Alert   // Added This Later
+  Alert ,  // Added This Later
+  
+  Image
+
 } from 'react-native';
-import { 
-  ChevronRight, 
-  Zap, 
+import {
+  ChevronRight,
+  Zap,
   Bookmark,
   Palette,
   X,
@@ -28,19 +31,56 @@ import {
   ListPlus,
   RotateCw,
   Lightbulb,
-  Info
+  Info,
+  User as UserIcon,
+  Volume2,
+  BookOpen   // ✅ ADD THIS
 } from 'lucide-react-native';
 import { MotiView, AnimatePresence } from 'moti';
 import { StatusBar } from 'expo-status-bar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as WebBrowser from 'expo-web-browser';
+import * as Google from 'expo-auth-session/providers/google';
+import * as Speech from 'expo-speech';
+
+WebBrowser.maybeCompleteAuthSession();
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const API_BASE = "http://localhost:3000"; 
 
-// --- Space Background Component (Grok Style) ---
+// --- Shooting Star Component (High Speed Streak) ---
+// Eita ekhon ekdom bijli-r moto screen cross korbe
+const ShootingStar = ({ delay = 0 }) => {
+  return (
+    <MotiView
+      from={{ 
+        left: -50, 
+        top: Math.random() * (SCREEN_HEIGHT / 3),
+        opacity: 0,
+        scaleX: 0.5
+      }}
+      animate={{ 
+        left: SCREEN_WIDTH + 50, 
+        top: SCREEN_HEIGHT * 0.7,
+        opacity: [0, 1, 1, 0],
+        scaleX: 2.5
+      }}
+      transition={{ 
+        duration: 700, 
+        loop: true, 
+        delay: 3000 + delay,
+        type: 'timing',
+        repeatReverse: false
+      }}
+      style={styles.shootingStarLine}
+    />
+  );
+};
+
 const StarField = () => {
   return (
     <View style={[StyleSheet.absoluteFill, { backgroundColor: '#000' }]}>
-      {[...Array(80)].map((_, i) => (
+      {[...Array(40)].map((_, i) => (
         <MotiView
           key={i}
           from={{ opacity: 0.2 }}
@@ -50,51 +90,445 @@ const StarField = () => {
             position: 'absolute',
             top: Math.random() * SCREEN_HEIGHT,
             left: Math.random() * SCREEN_WIDTH,
-            width: Math.random() * 2 + 1,
-            height: Math.random() * 2 + 1,
+            width: 2,
+            height: 2,
             backgroundColor: '#fff',
             borderRadius: 1,
           }}
         />
       ))}
-      <MotiView
-        from={{ translateX: -100, translateY: 0, opacity: 1 }}
-        animate={{ translateX: SCREEN_WIDTH + 100, translateY: SCREEN_HEIGHT * 0.5, opacity: 0 }}
-        transition={{ duration: 1500, loop: true, repeatReverse: false, delay: 5000, type: 'timing' }}
-        style={{
-          position: 'absolute',
-          top: 50,
-          left: 0,
-          width: 100,
-          height: 2,
-          backgroundColor: 'rgba(255,255,255,0.4)',
-          transform: [{ rotate: '30deg' }]
-        }}
-      />
+      <ShootingStar delay={0} />
+      <ShootingStar delay={4500} />
+      <ShootingStar delay={9000} />
     </View>
   );
 };
 
 const themes = {
-  amoled: { name: 'Space AMOLED', bg: '#000000', card: 'rgba(20, 20, 25, 0.6)', accent: '#3b82f6', text: '#ffffff', subText: '#60a5fa', isSpace: true },
-  verdant: { name: 'Verdant Luxe', bg: '#051c14', card: 'rgba(6, 78, 59, 0.3)', accent: '#10b981', text: '#ecfdf5', subText: '#34d399' },
-  crimson: { name: 'Crimson Royal', bg: '#1a0505', card: 'rgba(153, 27, 27, 0.3)', accent: '#dc2626', text: '#fef2f2', subText: '#f87171' },
-  onyx: { name: 'Pure Onyx', bg: '#000000', card: 'rgba(39, 39, 42, 0.5)', accent: '#f4f4f5', text: '#f4f4f5', subText: '#71717a' },
+  amoled: { name: 'Space AMOLED', bg: '#000000', card: 'rgba(20, 20, 25, 0.7)', accent: '#3b82f6', text: '#ffffff', subText: '#60a5fa', isSpace: true },
+  verdant: { name: 'Verdant Luxe', bg: '#051c14', card: 'rgba(6, 78, 59, 0.4)', accent: '#10b981', text: '#ecfdf5', subText: '#34d399' },
+  crimson: { name: 'Crimson Royal', bg: '#1a0505', card: 'rgba(153, 27, 27, 0.4)', accent: '#dc2626', text: '#fef2f2', subText: '#f87171' },
+  onyx: { name: 'Pure Onyx', bg: '#000000', card: 'rgba(39, 39, 42, 0.6)', accent: '#f4f4f5', text: '#f4f4f5', subText: '#71717a' },
   white: { name: 'Pure White', bg: '#f8fafc', card: '#ffffff', accent: '#2563eb', text: '#0f172a', subText: '#64748b' }
 };
 
 const levels = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2', 'IELTS', 'TOEFL', 'GRE'];
 
 const levelWordsMap = {
-  'A1': ['Apple', 'Water', 'Friend', 'School', 'Happy', 'Small', 'Run'],
-  'A2': ['Village', 'Journey', 'Kitchen', 'Famous', 'Simple', 'Advice'],
-  'B1': ['Confident', 'Opportunity', 'Manage', 'Product', 'Success'],
-  'B2': ['Analyze', 'Challenge', 'Distinct', 'Flexible', 'Observe'],
+  'A1': ['Apple', 'Water', 'Friend', 'School', 'Happy'],
+  'A2': ['Village', 'Journey', 'Kitchen', 'Famous', 'Simple'],
+  'B1': ['Confident', 'Opportunity', 'Manage', 'Product', 'Discuss'],
+  'B2': ['Analyze', 'Challenge', 'Consequence', 'Distinct', 'Flexible'],
   'C1': ['Acquaint', 'Beneficial', 'Coherent', 'Elaborate', 'Hypothesis'],
   'C2': ['Aesthetic', 'Benevolent', 'Conundrum', 'Epiphany', 'Ineffable'],
-  'IELTS': ['Mitigate', 'Substantial', 'Paradigm', 'Advocate', 'Viable'],
-  'TOEFL': ['Biodiversity', 'Stratosphere', 'Chronological', 'Symmetry'],
+  'IELTS': ['Mitigate', 'Correlation', 'Substantial', 'Paradigm', 'Advocate'],
+  'TOEFL': ['Interdependence', 'Biodiversity', 'Sediment', 'Stratosphere', 'Chronological'],
   'GRE': ['Alacrity', 'Bellicose', 'Capricious', 'Ephemeral', 'Loquacious']
+};
+
+
+
+
+const BASE_URL = 'http://localhost:3000';
+const READFLOW_STORE_KEY = 'readflow_mobile_v1';
+
+const parseReadFlowText = (raw) => {
+  const chunks = [];
+  const regex = /([^()]+?)\(([^)]+)\)/g;
+  let last = 0;
+  let match;
+
+  while ((match = regex.exec(raw)) !== null) {
+    if (match.index > last) {
+      chunks.push({ en: raw.slice(last, match.index), bn: null });
+    }
+
+    chunks.push({
+      en: match[1],
+      bn: match[2].trim()
+    });
+
+    last = match.index + match[0].length;
+  }
+
+  if (last < raw.length) {
+    chunks.push({ en: raw.slice(last), bn: null });
+  }
+
+  return chunks;
+};
+
+const ReadFlowPage = ({ activeTheme }) => {
+  const [rawText, setRawText] = useState('');
+  const [chunks, setChunks] = useState([]);
+  const [queue, setQueue] = useState([]);
+  const [fontSize, setFontSize] = useState(17);
+  const [revealedChunk, setRevealedChunk] = useState(null);
+  const [visibleQueueId, setVisibleQueueId] = useState(null);
+
+  const [books, setBooks] = useState([]);
+  const [selectedBook, setSelectedBook] = useState(null);
+  const [selectedChapter, setSelectedChapter] = useState(null);
+  const [loadingBooks, setLoadingBooks] = useState(false);
+
+  useEffect(() => {
+    loadReadFlow();
+    loadBooks();
+  }, []);
+
+  const loadReadFlow = async () => {
+    try {
+      const saved = await AsyncStorage.getItem(READFLOW_STORE_KEY);
+      if (!saved) return;
+
+      const parsed = JSON.parse(saved);
+      setRawText(parsed.rawText || '');
+      setChunks(parsed.chunks || []);
+      setQueue(parsed.queue || []);
+      setFontSize(parsed.fontSize || 17);
+    } catch (e) { }
+  };
+
+  const loadBooks = async () => {
+  try {
+    setLoadingBooks(true);
+
+    const res = await fetch(`${BASE_URL}/api/books`);
+    const data = await res.json();
+
+    console.log('Books from API:', data);
+
+    if (!res.ok) {
+      alert(data.error || 'Books load failed');
+      return;
+    }
+
+    setBooks(data);
+  } catch (e) {
+    console.log('Book load error:', e);
+    alert('Books load failed. Backend server running আছে কিনা check করো.');
+  } finally {
+    setLoadingBooks(false);
+  }
+};
+
+  const persistReadFlow = async (nextState) => {
+    try {
+      await AsyncStorage.setItem(
+        READFLOW_STORE_KEY,
+        JSON.stringify({
+          rawText,
+          chunks,
+          queue,
+          fontSize,
+          ...nextState
+        })
+      );
+    } catch (e) { }
+  };
+
+  const loadText = () => {
+    const clean = rawText.trim();
+    if (!clean) return;
+
+    const parsedChunks = parseReadFlowText(clean);
+    setChunks(parsedChunks);
+    persistReadFlow({ rawText: clean, chunks: parsedChunks });
+  };
+
+  const loadChapterText = async () => {
+  if (!selectedBook) {
+    alert('Please select a book first');
+    return;
+  }
+
+  if (!selectedChapter) {
+    alert('Please select a chapter first');
+    return;
+  }
+
+  try {
+    const url = `${BASE_URL}/api/books/${selectedBook._id}/chapters/${selectedChapter._id}`;
+    console.log('Loading chapter URL:', url);
+
+    const res = await fetch(url);
+    const data = await res.json();
+
+    if (!res.ok) {
+      alert(data.error || 'Failed to load chapter');
+      return;
+    }
+
+    if (!data.text) {
+      alert('No text found for this chapter');
+      return;
+    }
+
+    setRawText(data.text);
+
+    const parsedChunks = parseReadFlowText(data.text);
+    setChunks(parsedChunks);
+
+    persistReadFlow({
+      rawText: data.text,
+      chunks: parsedChunks,
+      selectedBookId: selectedBook._id,
+      selectedChapterId: selectedChapter._id,
+    });
+  } catch (e) {
+    console.log('Chapter load error:', e);
+    alert('Chapter load failed. Check console.');
+  }
+};
+
+  const clearText = () => {
+    setRawText('');
+    setChunks([]);
+    persistReadFlow({ rawText: '', chunks: [] });
+  };
+
+  const addToQueue = (chunk, index) => {
+    if (!chunk.bn) return;
+
+    setRevealedChunk(index);
+    setTimeout(() => setRevealedChunk(null), 5000);
+
+    const item = {
+      id: `${Date.now()}-${Math.random()}`,
+      en: chunk.en.trim(),
+      bn: chunk.bn,
+    };
+
+    const nextQueue = [...queue, item];
+    setQueue(nextQueue);
+    persistReadFlow({ queue: nextQueue });
+  };
+
+  const removeFromQueue = (id) => {
+    const nextQueue = queue.filter((q) => q.id !== id);
+    setQueue(nextQueue);
+    persistReadFlow({ queue: nextQueue });
+  };
+
+  const sendToEnd = (id) => {
+    const index = queue.findIndex((q) => q.id === id);
+    if (index < 0) return;
+
+    const nextQueue = [...queue];
+    const [item] = nextQueue.splice(index, 1);
+    nextQueue.push(item);
+
+    setQueue(nextQueue);
+    persistReadFlow({ queue: nextQueue });
+  };
+
+  const changeFont = (value) => {
+    const next = Math.max(12, Math.min(34, fontSize + value));
+    setFontSize(next);
+    persistReadFlow({ fontSize: next });
+  };
+
+  const showQueueMeaning = (id) => {
+    setVisibleQueueId(id);
+    setTimeout(() => setVisibleQueueId(null), 5000);
+  };
+
+  return (
+    <MotiView
+      key="readflow"
+      from={{ opacity: 0, y: 30 }}
+      animate={{ opacity: 1, y: 0 }}
+      style={styles.viewContainer}
+    >
+      <View style={[styles.readFlowTopCard, { backgroundColor: '#f5f0e8' }]}>
+        <View style={styles.readFlowHeaderRow}>
+          <View>
+            <Text style={styles.readFlowLogo}>READFLOW</Text>
+            <Text style={styles.readFlowSubtitle}>
+              Choose a book and chapter, then load reading text
+            </Text>
+          </View>
+
+          <View style={styles.readFlowFontBox}>
+            <TouchableOpacity onPress={() => changeFont(-1)} style={styles.readFlowFontBtn}>
+              <Text style={styles.readFlowFontBtnText}>−</Text>
+            </TouchableOpacity>
+
+            <Text style={styles.readFlowFontLabel}>{fontSize}</Text>
+
+            <TouchableOpacity onPress={() => changeFont(1)} style={styles.readFlowFontBtn}>
+              <Text style={styles.readFlowFontBtnText}>+</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <Text style={styles.readFlowSectionTitle}>SELECT BOOK</Text>
+
+        {loadingBooks ? (
+          <Text style={styles.readFlowEmpty}>Loading books...</Text>
+        ) : (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
+            {books.map((book) => (
+              <TouchableOpacity
+                key={book._id}
+                onPress={() => {
+                  setSelectedBook(book);
+                  setSelectedChapter(null);
+                }}
+                style={{
+                  padding: 12,
+                  marginRight: 10,
+                  borderRadius: 12,
+                  backgroundColor: selectedBook?._id === book._id ? '#c8873a' : '#faf7f2',
+                  borderWidth: 1,
+                  borderColor: 'rgba(26,20,16,0.18)'
+                }}
+              >
+                <Text style={{ color: selectedBook?._id === book._id ? '#fff' : '#1a1410', fontWeight: '900' }}>
+                  {book.coverEmoji} {book.title}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        )}
+
+        {selectedBook && (
+          <>
+            <Text style={styles.readFlowSectionTitle}>SELECT CHAPTER</Text>
+
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
+              {selectedBook.chapters.map((chapter) => (
+                <TouchableOpacity
+                  key={chapter._id}
+                  onPress={() => setSelectedChapter(chapter)}
+                  style={{
+                    padding: 10,
+                    marginRight: 8,
+                    borderRadius: 10,
+                    backgroundColor: selectedChapter?._id === chapter._id ? '#2e7d52' : '#faf7f2',
+                    borderWidth: 1,
+                    borderColor: 'rgba(26,20,16,0.18)'
+                  }}
+                >
+                  <Text style={{ color: selectedChapter?._id === chapter._id ? '#fff' : '#1a1410', fontWeight: '800' }}>
+                    {chapter.title}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            <TouchableOpacity
+              onPress={loadChapterText}
+              style={styles.readFlowPrimaryBtn}
+            >
+              <Text style={styles.readFlowPrimaryBtnText}>LOAD SELECTED CHAPTER</Text>
+            </TouchableOpacity>
+          </>
+        )}
+
+        <Text style={[styles.readFlowSectionTitle, { marginTop: 18 }]}>OR PASTE TEXT MANUALLY</Text>
+
+        <TextInput
+          style={styles.readFlowInput}
+          multiline
+          placeholder={"Example:\nTHE BOY'S NAME WAS (ছেলেটির নাম ছিল) SANTIAGO. DUSK was falling (সন্ধ্যা পড়ছিল)."}
+          placeholderTextColor="#9a8e82"
+          value={rawText}
+          onChangeText={setRawText}
+        />
+
+        <View style={styles.readFlowActions}>
+          <TouchableOpacity onPress={loadText} style={styles.readFlowPrimaryBtn}>
+            <Text style={styles.readFlowPrimaryBtnText}>LOAD MANUAL TEXT</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity onPress={clearText} style={styles.readFlowGhostBtn}>
+            <Text style={styles.readFlowGhostBtnText}>CLEAR</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <View style={[styles.readFlowPanel, { backgroundColor: '#faf7f2' }]}>
+        <Text style={styles.readFlowSectionTitle}>READING</Text>
+
+        {chunks.length === 0 ? (
+          <Text style={styles.readFlowEmpty}>
+            Select a book and chapter, then press Load Selected Chapter.
+          </Text>
+        ) : (
+          <View style={styles.readFlowReadingArea}>
+            {chunks.map((chunk, i) => {
+              if (!chunk.bn) {
+                return (
+                  <Text key={i} style={[styles.readFlowPlainText, { fontSize }]}>
+                    {chunk.en}
+                  </Text>
+                );
+              }
+
+              return (
+                <TouchableOpacity key={i} onPress={() => addToQueue(chunk, i)} activeOpacity={0.7}>
+                  <Text style={[styles.readFlowChunkText, { fontSize }]}>
+                    {chunk.en.trim()}
+                    {revealedChunk === i ? (
+                      <Text style={styles.readFlowReveal}> ({chunk.bn})</Text>
+                    ) : null}
+                    {' '}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        )}
+      </View>
+
+      <View style={[styles.readFlowPanel, { backgroundColor: '#faf7f2' }]}>
+        <View style={styles.readFlowQueueHeader}>
+          <Text style={styles.readFlowSectionTitle}>MEANING DISCOVERY</Text>
+          <Text style={styles.readFlowBadge}>{queue.length}</Text>
+        </View>
+
+        {queue.length === 0 ? (
+          <Text style={styles.readFlowEmpty}>
+            কোনো phrase-এ tap করলে সেটা practice queue-তে যোগ হবে।
+          </Text>
+        ) : (
+          queue.map((item, i) => (
+            <TouchableOpacity
+              key={item.id}
+              onPress={() => showQueueMeaning(item.id)}
+              style={styles.readFlowQueueItem}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.readFlowQueueIndex}>
+                {String(i + 1).padStart(2, '0')}
+              </Text>
+
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.readFlowQueueEnglish, { fontSize: Math.max(13, fontSize - 3) }]}>
+                  {item.en}
+                </Text>
+
+                {visibleQueueId === item.id ? (
+                  <Text style={styles.readFlowQueueBangla}>({item.bn})</Text>
+                ) : null}
+              </View>
+
+              <View style={styles.readFlowQueueBtns}>
+                <TouchableOpacity onPress={() => removeFromQueue(item.id)} style={styles.readFlowSmallBtn}>
+                  <CheckCircle2 size={16} color="#2e7d52" />
+                </TouchableOpacity>
+
+                <TouchableOpacity onPress={() => sendToEnd(item.id)} style={styles.readFlowSmallBtn}>
+                  <RotateCw size={15} color="#c8873a" />
+                </TouchableOpacity>
+              </View>
+            </TouchableOpacity>
+          ))
+        )}
+      </View>
+    </MotiView>
+  );
 };
 
 export default function App() {
@@ -111,20 +545,90 @@ export default function App() {
   const [suggestions, setSuggestions] = useState([]);
   const [selectedWordData, setSelectedWordData] = useState(null);
   const [tappingLoading, setTappingLoading] = useState(false);
+  
+  const [user, setUser] = useState(null);
   const [bookmarks, setBookmarks] = useState([]);
   const [learned, setLearned] = useState([]);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
 
+  const [request, response, promptAsync] = Google.useAuthRequest({
+    androidClientId: "YOUR_ANDROID_CLIENT_ID",
+    iosClientId: "YOUR_IOS_CLIENT_ID",
+    webClientId: "YOUR_WEB_CLIENT_ID",
+  });
+
   const activeTheme = themes[themeKey];
 
- useEffect(() => {
+
+useEffect(() => {
   const init = async () => {
     await loadProgress();
     await loadUser();
+    await loadLocalData();   // 👈 ADD THIS LINE
   };
   init();
 }, []);
+
+  useEffect(() => {
+    if (response?.type === 'success') {
+      const { authentication } = response;
+      getUserInfo(authentication.accessToken);
+    }
+  }, [response]);
+
   useEffect(() => { refreshSuggestions(level); }, [level]);
+
+  const speak = (word) => {
+    if (!word) return;
+    Speech.speak(word, { language: 'en-US', pitch: 1.0, rate: 0.9 });
+  };
+
+  const getUserInfo = async (token) => {
+    try {
+      const res = await fetch('https://www.googleapis.com/userinfo/v2/me', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const userInfo = await res.json();
+      setUser(userInfo);
+      await AsyncStorage.setItem('vortex_user', JSON.stringify(userInfo));
+      syncWithBackend(userInfo);
+    } catch (e) { console.error(e); }
+  };
+
+  const syncWithBackend = async (userData) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/user`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: userData.email,
+          name: userData.name,
+          picture: userData.picture,
+          googleId: userData.id,
+          bookmarks,
+          learned
+        })
+      });
+      const data = await res.json();
+      if (data.bookmarks) setBookmarks(data.bookmarks);
+      if (data.learned) setLearned(data.learned);
+    } catch (e) { console.warn("Sync failed"); }
+  };
+
+  const loadLocalData = async () => {
+    try {
+      const u = await AsyncStorage.getItem('vortex_user');
+      const b = await AsyncStorage.getItem('vortex_bookmarks');
+      const l = await AsyncStorage.getItem('vortex_learned');
+      if (u) {
+        const parsedUser = JSON.parse(u);
+        setUser(parsedUser);
+        syncWithBackend(parsedUser);
+      }
+      if (b) setBookmarks(JSON.parse(b));
+      if (l) setLearned(JSON.parse(l));
+    } catch (e) {}
+  };
 
   const refreshSuggestions = (currentLevel) => {
     const list = levelWordsMap[currentLevel || level];
@@ -136,6 +640,7 @@ export default function App() {
     const words = ["Resilient", "Ephemeral", "Luminous", "Eloquent", "Sovereign"];
     return words[new Date().getDay() % words.length];
   }, []);
+
 
   const loadProgress = async () => {
     try {
@@ -160,10 +665,13 @@ export default function App() {
   } catch (e) {}
 };
 
-  const saveProgress = async (newB, newL) => {
+
+  const saveLocalProgress = async (newB, newL) => {
+ 
     try {
       await AsyncStorage.setItem('vortex_bookmarks', JSON.stringify(newB));
       await AsyncStorage.setItem('vortex_learned', JSON.stringify(newL));
+      if (user) syncWithBackend(user);
     } catch (e) {}
   };
 
@@ -172,7 +680,7 @@ export default function App() {
     if (!bookmarks.includes(cleanWord) && !learned.includes(cleanWord)) {
       const next = [...bookmarks, cleanWord];
       setBookmarks(next);
-      saveProgress(next, learned);
+      saveLocalProgress(next, learned);
     }
     setSelectedWordData(null);
   };
@@ -182,7 +690,14 @@ export default function App() {
     const newL = [...learned, word];
     setBookmarks(newB);
     setLearned(newL);
-    saveProgress(newB, newL);
+    saveLocalProgress(newB, newL);
+  };
+
+  const logout = async () => {
+    await AsyncStorage.removeItem('vortex_user');
+    setUser(null);
+    setBookmarks([]);
+    setLearned([]);
   };
 
   const handleStart = async (wordToUse) => {
@@ -192,7 +707,7 @@ export default function App() {
     setCurrentView('reading');
     setSelectedWordData(null);
     try {
-      const response = await fetch('http://localhost:3000/api/word', {
+      const response = await fetch(`${API_BASE}/api/word`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ word, level })
@@ -200,7 +715,7 @@ export default function App() {
       const data = await response.json();
       setCurrentStory(data);
     } catch (err) {
-      setCurrentStory({ word, story: "Error loading vortex content. Is server running?", phonetic: "/error/" });
+      setCurrentStory({ word, story: "Vortex logic fail korsi... server check koren.", phonetic: "/err/" });
     } finally {
       setLoading(false);
       setInputWord('');
@@ -211,7 +726,7 @@ export default function App() {
     const cleanWord = word.replace(/[.,!?;:]/g, '').trim();
     setTappingLoading(true);
     try {
-      const response = await fetch('http://localhost:3000/api/word', {
+      const response = await fetch(`${API_BASE}/api/word`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ word: cleanWord, level })
@@ -219,7 +734,7 @@ export default function App() {
       const data = await response.json();
       setSelectedWordData(data);
     } catch (err) {
-      setSelectedWordData({ word: cleanWord, bengaliDefinition: "Detail Load Error", drills: [] });
+      setSelectedWordData({ word: cleanWord, bengaliDefinition: "Detail load error", drills: [] });
     } finally {
       setTappingLoading(false);
     }
@@ -234,13 +749,22 @@ export default function App() {
     <View style={[styles.container, { backgroundColor: activeTheme.bg }]}>
       <StatusBar style="light" />
       {activeTheme.isSpace && <StarField />}
-      
+
       <SafeAreaView style={{ flex: 1 }}>
         <View style={styles.header}>
           <MotiView from={{ opacity: 0 }} animate={{ opacity: 1 }}>
             <Text style={[styles.title, { color: activeTheme.text }]}>VOCAB<Text style={{ color: activeTheme.subText }}>VORTEX</Text></Text>
           </MotiView>
           <View style={styles.headerButtons}>
+            {user ? (
+              <TouchableOpacity onPress={() => logout()} style={[styles.iconButton, { backgroundColor: activeTheme.card }]}>
+                <Image source={{ uri: user.picture }} style={{ width: 24, height: 24, borderRadius: 12 }} />
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity onPress={() => promptAsync()} style={[styles.iconButton, { backgroundColor: activeTheme.card }]}>
+                <UserIcon size={20} color={activeTheme.text} />
+              </TouchableOpacity>
+            )}
             <TouchableOpacity onPress={() => setShowThemePicker(true)} style={[styles.iconButton, { backgroundColor: activeTheme.card }]}><Palette size={20} color={activeTheme.text} /></TouchableOpacity>
           </View>
         </View>
@@ -305,9 +829,9 @@ export default function App() {
 )}
             {currentView === 'home' && (
               <MotiView key="home" from={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} style={styles.viewContainer}>
-                <View style={[styles.heroCard, { backgroundColor: activeTheme.card, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' }]}>
+                <View style={[styles.heroCard, { backgroundColor: activeTheme.card }]}>
                   <Text style={[styles.heroTitle, { color: activeTheme.text }]}>Step into{"\n"}<Text style={{ color: activeTheme.subText }}>the Vortex</Text></Text>
-                  
+
                   <View style={styles.levelRow}>
                     {levels.map(lvl => (
                       <TouchableOpacity key={lvl} onPress={() => setLevel(lvl)} style={[styles.levelBtn, level === lvl ? { backgroundColor: activeTheme.accent } : { borderColor: activeTheme.text, borderWidth: 1, opacity: 0.3 }]}>
@@ -332,7 +856,11 @@ export default function App() {
                     <TouchableOpacity onPress={() => handleStart()} style={[styles.exploreBtn, { backgroundColor: activeTheme.accent }]}><ChevronRight size={24} color="#fff" /></TouchableOpacity>
                   </View>
 
-                  <TouchableOpacity onPress={() => setInputWord(wordOfTheDay)} style={styles.wodBtn}><Sparkles size={14} color={activeTheme.subText} /><Text style={styles.wodText}>WORD OF DAY: <Text style={{ textDecorationLine: 'underline' }}>{wordOfTheDay}</Text></Text></TouchableOpacity>
+                  {!user && (
+                    <TouchableOpacity onPress={() => promptAsync()} style={styles.loginBanner}>
+                      <Text style={{ color: activeTheme.subText, fontSize: 10, fontWeight: '900' }}>SIGN IN WITH GOOGLE TO SYNC PROGRESS</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
 
                 <View style={[styles.dashboardCard, { backgroundColor: activeTheme.card }]}>
@@ -342,8 +870,8 @@ export default function App() {
                     <Text style={[styles.progressText, { color: activeTheme.text }]}>{progressPercent}% Progress</Text>
                   </View>
                   <View style={styles.statsRow}>
-                     <View style={styles.statItem}><Text style={[styles.statNum, { color: activeTheme.text }]}>{bookmarks.length}</Text><Text style={styles.statLabel}>IN QUEUE</Text></View>
-                     <View style={styles.statItem}><Text style={[styles.statNum, { color: activeTheme.text }]}>{learned.length}</Text><Text style={styles.statLabel}>MASTERED</Text></View>
+                    <View style={styles.statItem}><Text style={[styles.statNum, { color: activeTheme.text }]}>{bookmarks.length}</Text><Text style={styles.statLabel}>IN QUEUE</Text></View>
+                    <View style={styles.statItem}><Text style={[styles.statNum, { color: activeTheme.text }]}>{learned.length}</Text><Text style={styles.statLabel}>MASTERED</Text></View>
                   </View>
                 </View>
               </MotiView>
@@ -352,11 +880,19 @@ export default function App() {
             {currentView === 'reading' && (
               <MotiView key="reading" from={{ opacity: 0 }} animate={{ opacity: 1 }} style={styles.viewContainer}>
                 {loading ? (
-                  <View style={styles.loader}><RotateCw size={40} color={activeTheme.accent} /><Text style={[styles.loaderText, { color: activeTheme.text, marginTop: 20 }]}>GENERATING VORTEX...</Text></View>
+                  <View style={styles.loader}><RotateCw size={40} color={activeTheme.accent} /><Text style={[styles.loaderText, { color: activeTheme.text, marginTop: 20 }]}>BREWING THE VORTEX...</Text></View>
                 ) : (
                   <View style={styles.resultStack}>
                     <View style={[styles.dictionaryHeader, { backgroundColor: activeTheme.card }]}>
-                      <View style={styles.dictTop}><Text style={[styles.dictWord, { color: activeTheme.text }]}>{currentStory?.word}</Text><TouchableOpacity onPress={() => addBookmark(currentStory?.word)}><Bookmark size={24} color={activeTheme.accent} /></TouchableOpacity></View>
+                      <View style={styles.dictTop}>
+                        <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                          <Text style={[styles.dictWord, { color: activeTheme.text }]}>{currentStory?.word}</Text>
+                          <TouchableOpacity onPress={() => speak(currentStory?.word)} style={styles.speakerBtn}>
+                            <Volume2 size={24} color={activeTheme.accent} />
+                          </TouchableOpacity>
+                        </View>
+                        <TouchableOpacity onPress={() => addBookmark(currentStory?.word)}><Bookmark size={24} color={activeTheme.accent} /></TouchableOpacity>
+                      </View>
                       <Text style={[styles.dictPhonetic, { color: activeTheme.subText }]}>{currentStory?.phonetic} • {currentStory?.partOfSpeech}</Text>
                       <Text style={[styles.dictBengali, { color: activeTheme.text }]}>{currentStory?.bengaliDefinition}</Text>
                     </View>
@@ -379,9 +915,12 @@ export default function App() {
                 )}
               </MotiView>
             )}
-
+            {currentView === 'readflow' && (
+              <ReadFlowPage activeTheme={activeTheme} />
+            )}
             {currentView === 'dashboard' && (
               <MotiView key="dashboard" from={{ opacity: 0, x: 100 }} animate={{ opacity: 1, x: 0 }} style={styles.viewContainer}>
+
                  <Text style={[styles.heroTitle, { color: activeTheme.text }]}>Learning <Text style={{ color: activeTheme.subText }}>Queue</Text></Text>
                  <View style={{ marginBottom: 20 }}>
   <Text style={{ color: activeTheme.text, fontSize: 18, fontWeight: 'bold' }}>
@@ -409,6 +948,11 @@ export default function App() {
     🔄 Reset Profile
   </Text>
 </TouchableOpacity>
+
+                 <View style={styles.dashboardProfile}>
+                    {user && <Image source={{ uri: user.picture }} style={styles.profilePic} />}
+                    <Text style={[styles.heroTitle, { color: activeTheme.text, fontSize: 24 }]}>{user ? `Hi, ${user.given_name}` : "Your"} <Text style={{ color: activeTheme.subText }}>Vortex</Text></Text>
+                 </View>
                  <ScrollView style={styles.listScroll}>
                    {bookmarks.length === 0 ? <Text style={{ color: activeTheme.text, opacity: 0.3, textAlign: 'center', marginTop: 100 }}>QUEUE EMPTY</Text> : bookmarks.map((w, i) => (
                      <View key={i} style={[styles.listItem, { backgroundColor: activeTheme.card }]}>
@@ -424,11 +968,21 @@ export default function App() {
 
         <View style={styles.bottomNav}>
           <View style={[styles.navContainer, { backgroundColor: activeTheme.card, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)' }]}>
-            <TouchableOpacity onPress={() => setCurrentView('home')}><Zap size={24} color={currentView === 'home' ? activeTheme.accent : activeTheme.text} /></TouchableOpacity>
-            <TouchableOpacity onPress={() => setCurrentView('dashboard')}><LayoutDashboard size={24} color={currentView === 'dashboard' ? activeTheme.accent : activeTheme.text} /></TouchableOpacity>
+            <TouchableOpacity onPress={() => setCurrentView('home')}>
+              <Zap size={24} color={currentView === 'home' ? activeTheme.accent : activeTheme.text} />
+            </TouchableOpacity>
+
+            <TouchableOpacity onPress={() => setCurrentView('readflow')}>
+              <BookOpen size={24} color={currentView === 'readflow' ? activeTheme.accent : activeTheme.text} />
+            </TouchableOpacity>
+
+            <TouchableOpacity onPress={() => setCurrentView('dashboard')}>
+              <LayoutDashboard size={24} color={currentView === 'dashboard' ? activeTheme.accent : activeTheme.text} />
+            </TouchableOpacity>
           </View>
         </View>
       </SafeAreaView>
+
 
       <Modal visible={showWelcomeModal} transparent animationType="fade">
   <View style={{
@@ -529,6 +1083,9 @@ export default function App() {
 </Modal>
 
       {/* Popups */}
+
+      {/* Word Insight Modal */}
+ 
       <Modal visible={!!selectedWordData || tappingLoading} transparent animationType="slide">
         <View style={styles.modalOverlay}>
            <MotiView from={{ translateY: 300, opacity: 0 }} animate={{ translateY: 0, opacity: 1 }} style={[styles.detailModal, { backgroundColor: '#0a0a0a', borderColor: activeTheme.accent }]}>
@@ -537,19 +1094,33 @@ export default function App() {
               ) : (
                 <ScrollView showsVerticalScrollIndicator={false}>
                   <View style={styles.modalHeaderInner}>
-                    <View><Text style={[styles.modalWord, { color: '#fff' }]}>{selectedWordData?.word}</Text><Text style={[styles.modalPhonetic, { color: activeTheme.subText }]}>{selectedWordData?.phonetic} • {selectedWordData?.partOfSpeech}</Text></View>
+                    <View>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                        <Text style={[styles.modalWord, { color: '#fff' }]}>{selectedWordData?.word}</Text>
+                        <TouchableOpacity onPress={() => speak(selectedWordData?.word)} style={styles.modalSpeakerBtn}>
+                          <Volume2 size={32} color={activeTheme.accent} />
+                        </TouchableOpacity>
+                      </View>
+                      <Text style={[styles.modalPhonetic, { color: activeTheme.subText }]}>{selectedWordData?.phonetic} • {selectedWordData?.partOfSpeech}</Text>
+                    </View>
                     <TouchableOpacity onPress={() => setSelectedWordData(null)} style={styles.modalClose}><X size={24} color="#fff"/></TouchableOpacity>
                   </View>
-                  <View style={[styles.modalMeaningCard, { backgroundColor: 'rgba(255,255,255,0.05)' }]}><Text style={[styles.modalMeaning, { color: '#fff' }]}>{selectedWordData?.bengaliDefinition}</Text></View>
+                  
+                  <View style={[styles.modalMeaningCard, { backgroundColor: 'rgba(255,255,255,0.08)' }]}><Text style={[styles.modalMeaning, { color: '#fff' }]}>{selectedWordData?.bengaliDefinition}</Text></View>
+                  
                   <View style={styles.drillSection}>
                     <View style={styles.sectionLabel}><Lightbulb size={16} color={activeTheme.accent} /><Text style={[styles.sectionLabelText, { color: activeTheme.accent }]}>6 CONTEXTUAL DRILLS</Text></View>
                     {selectedWordData?.drills?.map((drill, i) => (
                       <View key={i} style={[styles.drillCard, { borderLeftColor: activeTheme.accent }]}>
                         <Text style={[styles.drillSentence, { color: '#fff' }]}>{drill.sentence}</Text>
-                        <View style={styles.drillExplanationRow}><Info size={12} color={activeTheme.subText}/><Text style={styles.drillExplanation}>{drill.explanation}</Text></View>
+                        <View style={styles.drillExplanationRow}>
+                          <Info size={14} color={activeTheme.subText}/>
+                          <Text style={[styles.drillExplanation, { color: '#bbb' }]}>{drill.explanation}</Text>
+                        </View>
                       </View>
                     ))}
                   </View>
+
                   <View style={styles.modalActions}>
                     <TouchableOpacity onPress={() => handleStart(selectedWordData?.word)} style={[styles.modalBtn, { backgroundColor: activeTheme.accent }]}><Zap size={18} color="#fff" /><Text style={styles.modalBtnText}>START VORTEX</Text></TouchableOpacity>
                     <TouchableOpacity onPress={() => addBookmark(selectedWordData?.word)} style={[styles.modalBtn, { backgroundColor: 'rgba(255,255,255,0.1)' }]}><Bookmark size={18} color="#fff" /><Text style={[styles.modalBtnText, { color: '#fff' }]}>BOOKMARK</Text></TouchableOpacity>
@@ -581,10 +1152,18 @@ export default function App() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  shootingStarLine: {
+    position: 'absolute',
+    width: 120,
+    height: 2,
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    transform: [{ rotate: '35deg' }],
+    borderRadius: 1,
+  },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 24, paddingTop: Platform.OS === 'android' ? RNStatusBar.currentHeight + 20 : 20 },
   title: { fontSize: 24, fontWeight: '900', letterSpacing: -1 },
   headerButtons: { flexDirection: 'row', gap: 10 },
-  iconButton: { padding: 12, borderRadius: 16 },
+  iconButton: { padding: 12, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
   scrollContent: { paddingBottom: 120 },
   viewContainer: { padding: 24 },
   heroCard: { borderRadius: 32, padding: 32, marginBottom: 20 },
@@ -601,8 +1180,7 @@ const styles = StyleSheet.create({
   inputWrapper: { flexDirection: 'row', gap: 10, marginBottom: 20 },
   input: { flex: 1, borderRadius: 20, paddingHorizontal: 20, height: 60, fontSize: 16, fontWeight: '700' },
   exploreBtn: { width: 60, height: 60, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
-  wodBtn: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  wodText: { fontSize: 10, fontWeight: '900', opacity: 0.5 },
+  loginBanner: { marginTop: 10, opacity: 0.5 },
   dashboardCard: { borderRadius: 32, padding: 24 },
   dashboardHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 20 },
   dashboardTitle: { fontSize: 10, fontWeight: '900', letterSpacing: 2 },
@@ -620,6 +1198,7 @@ const styles = StyleSheet.create({
   dictionaryHeader: { borderRadius: 32, padding: 32 },
   dictTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
   dictWord: { fontSize: 40, fontWeight: '900', letterSpacing: -1 },
+  speakerBtn: { padding: 8, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 12 },
   dictPhonetic: { fontSize: 14, fontWeight: '700', marginBottom: 20 },
   dictBengali: { fontSize: 32, fontWeight: '900' },
   storySection: { borderRadius: 32, padding: 32 },
@@ -631,11 +1210,14 @@ const styles = StyleSheet.create({
   nextBtnText: { color: '#fff', fontWeight: '900', letterSpacing: 2 },
   bottomNav: { position: 'absolute', bottom: 30, left: 24, right: 24 },
   navContainer: { flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', paddingVertical: 20, borderRadius: 32 },
+  dashboardProfile: { flexDirection: 'row', alignItems: 'center', gap: 15, marginBottom: 30 },
+  profilePic: { width: 50, height: 50, borderRadius: 25, borderWidth: 2, borderColor: '#fff' },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.95)', justifyContent: 'flex-end' },
   detailModal: { height: '90%', borderTopLeftRadius: 40, borderTopRightRadius: 40, padding: 32, borderWidth: 1 },
   modalLoader: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   modalHeaderInner: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 30 },
   modalWord: { fontSize: 48, fontWeight: '900', letterSpacing: -2 },
+  modalSpeakerBtn: { padding: 10, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 16 },
   modalPhonetic: { fontSize: 16, fontWeight: '700' },
   modalClose: { padding: 8, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 12 },
   modalMeaningCard: { padding: 24, borderRadius: 24, marginBottom: 32 },
@@ -643,8 +1225,8 @@ const styles = StyleSheet.create({
   drillSection: { gap: 16, marginBottom: 40 },
   drillCard: { padding: 20, backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 20, borderLeftWidth: 4 },
   drillSentence: { fontSize: 18, fontWeight: '700', marginBottom: 8, lineHeight: 24 },
-  drillExplanationRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  drillExplanation: { fontSize: 12, opacity: 0.5, fontStyle: 'italic' },
+  drillExplanationRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+  drillExplanation: { fontSize: 13, flex: 1, lineHeight: 18 },
   modalActions: { flexDirection: 'row', gap: 12, paddingBottom: 20 },
   modalBtn: { flex: 1, height: 60, borderRadius: 20, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 10 },
   modalBtnText: { fontWeight: '900', fontSize: 12, letterSpacing: 1 },
@@ -657,5 +1239,201 @@ const styles = StyleSheet.create({
   themeColor: { width: 32, height: 32, borderRadius: 16 },
   listItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderRadius: 20, marginBottom: 12 },
   listItemText: { fontSize: 18, fontWeight: '800' },
-  listScroll: { flex: 1, marginTop: 20 }
+  listScroll: { flex: 1, marginTop: 20 },
+
+  readFlowTopCard: {
+    borderRadius: 28,
+    padding: 20,
+    marginBottom: 18
+  },
+  readFlowHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+    gap: 12
+  },
+  readFlowLogo: {
+    fontSize: 13,
+    fontWeight: '900',
+    letterSpacing: 2,
+    color: '#c8873a'
+  },
+  readFlowSubtitle: {
+    fontSize: 11,
+    color: '#5a4e42',
+    marginTop: 4,
+    maxWidth: 210
+  },
+  readFlowFontBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6
+  },
+  readFlowFontBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(26,20,16,0.22)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#faf7f2'
+  },
+  readFlowFontBtnText: {
+    color: '#5a4e42',
+    fontSize: 18,
+    fontWeight: '900'
+  },
+  readFlowFontLabel: {
+    color: '#9a8e82',
+    fontSize: 12,
+    fontWeight: '900',
+    minWidth: 22,
+    textAlign: 'center'
+  },
+  readFlowInput: {
+    minHeight: 150,
+    maxHeight: 240,
+    textAlignVertical: 'top',
+    backgroundColor: '#faf7f2',
+    borderWidth: 1,
+    borderColor: 'rgba(26,20,16,0.22)',
+    borderRadius: 14,
+    padding: 14,
+    color: '#1a1410',
+    fontSize: 13,
+    lineHeight: 21
+  },
+  readFlowActions: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 14
+  },
+  readFlowPrimaryBtn: {
+    backgroundColor: '#c8873a',
+    paddingVertical: 12,
+    paddingHorizontal: 22,
+    borderRadius: 12
+  },
+  readFlowPrimaryBtnText: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '900',
+    letterSpacing: 1.3
+  },
+  readFlowGhostBtn: {
+    borderWidth: 1,
+    borderColor: 'rgba(26,20,16,0.22)',
+    paddingVertical: 12,
+    paddingHorizontal: 22,
+    borderRadius: 12
+  },
+  readFlowGhostBtnText: {
+    color: '#5a4e42',
+    fontSize: 11,
+    fontWeight: '900',
+    letterSpacing: 1.3
+  },
+  readFlowPanel: {
+    borderRadius: 24,
+    padding: 18,
+    marginBottom: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(26,20,16,0.10)'
+  },
+  readFlowSectionTitle: {
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 2,
+    color: '#9a8e82',
+    marginBottom: 14
+  },
+  readFlowEmpty: {
+    color: '#9a8e82',
+    fontSize: 13,
+    lineHeight: 22,
+    textAlign: 'center',
+    paddingVertical: 24
+  },
+  readFlowReadingArea: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'flex-start'
+  },
+  readFlowPlainText: {
+    color: '#1a1410',
+    lineHeight: 32
+  },
+  readFlowChunkText: {
+    color: '#1a1410',
+    lineHeight: 32,
+    fontWeight: '500'
+  },
+  readFlowReveal: {
+    color: '#2e7d52',
+    fontSize: 14,
+    fontWeight: '700'
+  },
+  readFlowQueueHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center'
+  },
+  readFlowBadge: {
+    backgroundColor: '#f5f0e8',
+    borderWidth: 1,
+    borderColor: 'rgba(26,20,16,0.20)',
+    color: '#9a8e82',
+    fontSize: 11,
+    fontWeight: '900',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 20,
+    marginBottom: 14
+  },
+  readFlowQueueItem: {
+    flexDirection: 'row',
+    gap: 10,
+    alignItems: 'flex-start',
+    padding: 12,
+    borderRadius: 14,
+    backgroundColor: '#f5f0e8',
+    borderWidth: 1,
+    borderColor: 'rgba(26,20,16,0.10)',
+    marginBottom: 8
+  },
+  readFlowQueueIndex: {
+    color: '#9a8e82',
+    fontSize: 10,
+    fontWeight: '900',
+    marginTop: 2,
+    width: 22
+  },
+  readFlowQueueEnglish: {
+    color: '#1a1410',
+    lineHeight: 22,
+    fontWeight: '700'
+  },
+  readFlowQueueBangla: {
+    color: '#2e7d52',
+    fontSize: 14,
+    lineHeight: 22,
+    marginTop: 3,
+    fontWeight: '600'
+  },
+  readFlowQueueBtns: {
+    flexDirection: 'row',
+    gap: 6
+  },
+  readFlowSmallBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(26,20,16,0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ede8dc'
+  },
 });

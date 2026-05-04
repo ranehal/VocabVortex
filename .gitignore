@@ -1,6 +1,6 @@
 *.md
 *.ps1
-*.bat
+# *.bat
 node_modules/
 .expo/
 .next/
