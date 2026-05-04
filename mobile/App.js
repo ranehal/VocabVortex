@@ -13,7 +13,8 @@ import {
   StatusBar as RNStatusBar,
   Modal,
   ActivityIndicator,
-  Canvas
+  Canvas,
+  Alert   // Added This Later
 } from 'react-native';
 import { 
   ChevronRight, 
@@ -98,7 +99,10 @@ const levelWordsMap = {
 
 export default function App() {
   const [themeKey, setThemeKey] = useState('amoled');
-  const [currentView, setCurrentView] = useState('home');
+  const [currentView, setCurrentView] = useState('onboarding');
+  const [userName, setUserName] = useState('');
+  const [userAge, setUserAge] = useState('');
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const [level, setLevel] = useState('A2');
   const [inputWord, setInputWord] = useState('');
   const [currentStory, setCurrentStory] = useState(null);
@@ -109,10 +113,17 @@ export default function App() {
   const [tappingLoading, setTappingLoading] = useState(false);
   const [bookmarks, setBookmarks] = useState([]);
   const [learned, setLearned] = useState([]);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   const activeTheme = themes[themeKey];
 
-  useEffect(() => { loadProgress(); }, []);
+ useEffect(() => {
+  const init = async () => {
+    await loadProgress();
+    await loadUser();
+  };
+  init();
+}, []);
   useEffect(() => { refreshSuggestions(level); }, [level]);
 
   const refreshSuggestions = (currentLevel) => {
@@ -134,6 +145,20 @@ export default function App() {
       if (l) setLearned(JSON.parse(l));
     } catch (e) {}
   };
+
+  const loadUser = async () => {
+  try {
+    const name = await AsyncStorage.getItem('userName');
+    const age = await AsyncStorage.getItem('userAge');
+
+    if (name) setUserName(name);
+    if (age) setUserAge(age);
+
+    if (name && age) {
+      setCurrentView('home');
+    }
+  } catch (e) {}
+};
 
   const saveProgress = async (newB, newL) => {
     try {
@@ -222,6 +247,62 @@ export default function App() {
 
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           <AnimatePresence exitBeforeEnter>
+            {currentView === 'onboarding' && (
+  <MotiView key="onboarding" from={{ opacity: 0 }} animate={{ opacity: 1 }} style={styles.viewContainer}>
+    
+    <Text style={[styles.heroTitle, { color: activeTheme.text }]}>
+      Welcome to <Text style={{ color: activeTheme.subText }}>VocabVortex</Text>
+    </Text>
+
+    <TextInput
+      placeholder="Enter your name"
+      placeholderTextColor="gray"
+      value={userName}
+      onChangeText={setUserName}
+       style={[
+    styles.input,
+    { 
+      marginBottom: 20,
+      color: activeTheme.text,
+      backgroundColor: 'rgba(255,255,255,0.1)'
+    }
+  ]}
+/>
+    <TextInput
+      placeholder="Enter your age"
+      placeholderTextColor="gray"
+      value={userAge}
+      onChangeText={setUserAge}
+      keyboardType="numeric"
+       style={[
+    styles.input,
+    { 
+      marginBottom: 20,
+      color: activeTheme.text,
+      backgroundColor: 'rgba(255,255,255,0.1)'
+    }
+  ]}
+/>
+
+    <TouchableOpacity
+     onPress={async () => {
+  if (!userName || !userAge) {
+    alert("Please fill all fields");
+    return;
+  }
+
+  await AsyncStorage.setItem('userName', userName);
+  await AsyncStorage.setItem('userAge', userAge);
+
+  setShowWelcomeModal(true);
+}}
+      style={[styles.exploreBtn, { alignSelf: 'center' }]}
+    >
+      <Text style={{ color: '#fff', fontWeight: 'bold' }}>Submit</Text>
+    </TouchableOpacity>
+
+  </MotiView>
+)}
             {currentView === 'home' && (
               <MotiView key="home" from={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} style={styles.viewContainer}>
                 <View style={[styles.heroCard, { backgroundColor: activeTheme.card, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' }]}>
@@ -302,6 +383,32 @@ export default function App() {
             {currentView === 'dashboard' && (
               <MotiView key="dashboard" from={{ opacity: 0, x: 100 }} animate={{ opacity: 1, x: 0 }} style={styles.viewContainer}>
                  <Text style={[styles.heroTitle, { color: activeTheme.text }]}>Learning <Text style={{ color: activeTheme.subText }}>Queue</Text></Text>
+                 <View style={{ marginBottom: 20 }}>
+  <Text style={{ color: activeTheme.text, fontSize: 18, fontWeight: 'bold' }}>
+    👤 {userName || "Guest"}
+  </Text>
+  <Text style={{ color: activeTheme.subText, fontSize: 14 }}>
+    🎂 Age: {userAge || "N/A"}
+  </Text>
+</View>
+
+
+<TouchableOpacity
+  onPress={() => {
+    setShowResetConfirm(true);   // ✅ ONLY OPEN MODAL
+  }}
+  style={{
+    marginBottom: 100,
+    backgroundColor: '#dc2626',
+    padding: 14,
+    borderRadius: 12,
+    alignItems: 'center'
+  }}
+>
+  <Text style={{ color: '#fff', fontWeight: 'bold' }}>
+    🔄 Reset Profile
+  </Text>
+</TouchableOpacity>
                  <ScrollView style={styles.listScroll}>
                    {bookmarks.length === 0 ? <Text style={{ color: activeTheme.text, opacity: 0.3, textAlign: 'center', marginTop: 100 }}>QUEUE EMPTY</Text> : bookmarks.map((w, i) => (
                      <View key={i} style={[styles.listItem, { backgroundColor: activeTheme.card }]}>
@@ -322,6 +429,104 @@ export default function App() {
           </View>
         </View>
       </SafeAreaView>
+
+      <Modal visible={showWelcomeModal} transparent animationType="fade">
+  <View style={{
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    justifyContent: 'center',
+    alignItems: 'center'
+  }}>
+    
+    <View style={{
+      width: '80%',
+      backgroundColor: '#111',
+      padding: 20,
+      borderRadius: 20,
+      alignItems: 'center'
+    }}>
+      
+      <Text style={{ color: '#fff', fontSize: 20, fontWeight: 'bold', marginBottom: 10 }}>
+        🎉 Welcome, {userName}!
+      </Text>
+
+      <Text style={{ color: '#aaa', marginBottom: 20 }}>
+        Your learning journey starts now 🚀
+      </Text>
+
+      <TouchableOpacity
+        onPress={() => {
+          setShowWelcomeModal(false);
+          setCurrentView('home');
+        }}
+        style={{
+          backgroundColor: '#3b82f6',
+          padding: 14,
+          borderRadius: 12,
+          width: '100%',
+          alignItems: 'center'
+        }}
+      >
+        <Text style={{ color: '#fff', fontWeight: 'bold' }}>
+          Let’s Go 🚀
+        </Text>
+      </TouchableOpacity>
+
+    </View>
+  </View>
+</Modal>
+
+      <Modal visible={showResetConfirm} transparent animationType="fade">
+  <View style={{
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    justifyContent: 'center',
+    alignItems: 'center'
+  }}>
+    
+    <View style={{
+      width: '80%',
+      backgroundColor: '#111',
+      padding: 20,
+      borderRadius: 20
+    }}>
+      
+      <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold' }}>
+        Reset Profile
+      </Text>
+
+      <Text style={{ color: '#aaa', marginVertical: 15 }}>
+        Are you sure you want to reset?
+      </Text>
+
+      <View style={{ flexDirection: 'row', gap: 10 }}>
+        
+        <TouchableOpacity
+          onPress={() => setShowResetConfirm(false)}
+          style={{ flex: 1, padding: 12, backgroundColor: '#333', borderRadius: 10, alignItems: 'center' }}
+        >
+          <Text style={{ color: '#fff' }}>Cancel</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={async () => {
+            await AsyncStorage.removeItem('userName');
+            await AsyncStorage.removeItem('userAge');
+
+            setUserName('');
+            setUserAge('');
+            setShowResetConfirm(false);
+            setCurrentView('onboarding');
+          }}
+          style={{ flex: 1, padding: 12, backgroundColor: '#dc2626', borderRadius: 10, alignItems: 'center' }}
+        >
+          <Text style={{ color: '#fff' }}>Reset</Text>
+        </TouchableOpacity>
+
+      </View>
+    </View>
+  </View>
+</Modal>
 
       {/* Popups */}
       <Modal visible={!!selectedWordData || tappingLoading} transparent animationType="slide">
