@@ -1,3 +1,20 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Custom Scrollbar for Web (Chakra UI Red style) */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(254, 215, 215, 0.3); /* red.subtle */
+  border-radius: 5px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(229, 62, 62, 0.8); /* red.solid */
+  border-radius: 5px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(197, 48, 48, 1);
+}
