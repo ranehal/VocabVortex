@@ -906,6 +906,9 @@ export default function App() {
   const [currentView, setCurrentView] = useState('onboarding');
   const [userName, setUserName] = useState('');
   const [userAge, setUserAge] = useState('');
+  const [userEmail, setUserEmail] = useState('');
+  const [userPassword, setUserPassword] = useState('');
+  const [isLogin, setIsLogin] = useState(true);
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const [level, setLevel] = useState('A2');
   const [inputWord, setInputWord] = useState('');
@@ -1021,18 +1024,22 @@ useEffect(() => {
     } catch (e) {}
   };
 
-  const loadUser = async () => {
-  try {
-    const name = await AsyncStorage.getItem('userName');
-    const age = await AsyncStorage.getItem('userAge');
+const loadUser = async () => {
 
-    if (name) setUserName(name);
-    if (age) setUserAge(age);
+  const loggedIn = await AsyncStorage.getItem('isLoggedIn');
 
-    if (name && age) {
-      setCurrentView('home');
-    }
-  } catch (e) {}
+  const savedName = await AsyncStorage.getItem('userName');
+  const savedAge = await AsyncStorage.getItem('userAge');
+
+  if (savedName) setUserName(savedName);
+  if (savedAge) setUserAge(savedAge);
+
+  if (loggedIn === 'true') {
+    setCurrentView('home');
+  } else {
+    setCurrentView('onboarding');
+  }
+
 };
 
 
@@ -1144,56 +1151,197 @@ useEffect(() => {
             {currentView === 'onboarding' && (
   <MotiView key="onboarding" from={{ opacity: 0 }} animate={{ opacity: 1 }} style={[styles.viewContainer, { flex: 1, justifyContent: 'center' }]}>
     
-    <Text style={[styles.heroTitle, { color: activeTheme.text }]}>
-      Welcome to <Text style={{ color: activeTheme.subText }}>VocabVortex</Text>
-    </Text>
+    <Text style={{
+  fontSize: 38,
+  fontWeight: '900',
+  color: activeTheme.text,
+  textAlign: 'center'
+}}>
+  Vocab<Text style={{ color: activeTheme.accent }}>Vortex</Text>
+</Text>
 
-    <TextInput
-      placeholder="Enter your name"
-      placeholderTextColor="gray"
-      value={userName}
-      onChangeText={setUserName}
-       style={[
-    styles.input,
-    { 
-      marginBottom: 20,
-      color: activeTheme.text,
-      backgroundColor: 'rgba(255,255,255,0.1)'
-    }
-  ]}
-/>
-    <TextInput
-      placeholder="Enter your age"
-      placeholderTextColor="gray"
-      value={userAge}
-      onChangeText={setUserAge}
-      keyboardType="numeric"
-       style={[
-    styles.input,
-    { 
-      marginBottom: 20,
-      color: activeTheme.text,
-      backgroundColor: 'rgba(255,255,255,0.1)'
-    }
-  ]}
-/>
+<Text style={{
+  color: activeTheme.subText,
+  textAlign: 'center',
+  marginTop: 10,
+  fontSize: 14
+}}>
+  Expand your vocabulary journey
+</Text>
 
-    <TouchableOpacity
-     onPress={async () => {
-  if (!userName || !userAge) {
-    alert("Please fill all fields");
-    return;
-  }
+<Text style={{
+  color: activeTheme.subText,
+  textAlign: 'center',
+  marginTop: 40,
+  marginBottom: 25,
+  fontSize: 12,
+  letterSpacing: 2
+}}>
+  AUTHENTICATION
+</Text>
+    <Text style={{
+  color: activeTheme.subText,
+  marginBottom: 20,
+  textAlign: 'center'
+}}>
+  {isLogin ? 'Login to continue' : 'Create a new account'}
+</Text>
 
-  await AsyncStorage.setItem('userName', userName);
-  await AsyncStorage.setItem('userAge', userAge);
-
-  setShowWelcomeModal(true);
+{/* NAME INPUT (ONLY FOR SIGNUP) */}
+{!isLogin && (
+  <TextInput
+    placeholder="Full Name"
+    placeholderTextColor="gray"
+    value={userName}
+    onChangeText={setUserName}
+    style={{
+  backgroundColor: 'rgba(255,255,255,0.06)',
+  borderWidth: 1,
+  borderColor: 'rgba(255,255,255,0.08)',
+  borderRadius: 14,
+  paddingHorizontal: 15,
+  height: 55,
+  color: activeTheme.text,
+  marginTop: 20
 }}
-      style={[styles.exploreBtn, { alignSelf: 'center' }]}
-    >
-      <Text style={{ color: '#fff', fontWeight: 'bold' }}>Submit</Text>
-    </TouchableOpacity>
+  />
+)}
+
+{/* AGE INPUT (ONLY FOR SIGNUP) */}
+{!isLogin && (
+  <TextInput
+    placeholder="Age"
+    placeholderTextColor="gray"
+    value={userAge}
+    onChangeText={setUserAge}
+    keyboardType="numeric"
+    style={{
+  backgroundColor: 'rgba(255,255,255,0.06)',
+  borderWidth: 1,
+  borderColor: 'rgba(255,255,255,0.08)',
+  borderRadius: 14,
+  paddingHorizontal: 15,
+  height: 55,
+  color: activeTheme.text,
+  marginTop: 15
+}}
+  />
+)}
+
+{/* EMAIL */}
+<TextInput
+  placeholder="Email"
+  placeholderTextColor="gray"
+  value={userEmail}
+  onChangeText={setUserEmail}
+  style={{
+  backgroundColor: 'rgba(255,255,255,0.06)',
+  borderWidth: 1,
+  borderColor: 'rgba(255,255,255,0.08)',
+  borderRadius: 14,
+  paddingHorizontal: 15,
+  height: 55,
+  color: activeTheme.text,
+  marginTop: 20
+}}
+/>
+
+{/* PASSWORD */}
+<TextInput
+  placeholder="Password"
+  placeholderTextColor="gray"
+  secureTextEntry
+  value={userPassword}
+  onChangeText={setUserPassword}
+ style={{
+  backgroundColor: 'rgba(255,255,255,0.06)',
+  borderWidth: 1,
+  borderColor: 'rgba(255,255,255,0.08)',
+  borderRadius: 14,
+  paddingHorizontal: 15,
+  height: 55,
+  color: activeTheme.text,
+  marginTop: 15
+}}
+/>
+
+{/* LOGIN / SIGNUP BUTTON */}
+<TouchableOpacity
+  onPress={async () => {
+
+    if (isLogin) {
+
+      const savedEmail = await AsyncStorage.getItem('userEmail');
+      const savedPassword = await AsyncStorage.getItem('userPassword');
+      const savedName = await AsyncStorage.getItem('userName');
+      const savedAge = await AsyncStorage.getItem('userAge');
+
+      if (
+        userEmail === savedEmail &&
+        userPassword === savedPassword
+      ) {
+        setUserName(savedName || '');
+        setUserAge(savedAge || '');
+        await AsyncStorage.setItem('isLoggedIn', 'true');
+        setCurrentView('home');
+      } else {
+        alert('Invalid email or password');
+      }
+
+    } else {
+
+      if (!userName || !userAge || !userEmail || !userPassword) {
+        alert('Please fill all fields');
+        return;
+      }
+
+      await AsyncStorage.setItem('userName', userName);
+      await AsyncStorage.setItem('userAge', userAge);
+      await AsyncStorage.setItem('userEmail', userEmail);
+      await AsyncStorage.setItem('userPassword', userPassword);
+
+      alert('Account created successfully! Please login.');
+
+  setIsLogin(true);
+
+  setUserPassword('');
+    }
+
+  }}
+ style={{
+  backgroundColor: '#2563eb',
+  paddingVertical: 16,
+  borderRadius: 14,
+  alignItems: 'center',
+  marginTop: 25,
+  width: '100%'
+}}
+>
+
+<Text style={{
+  color: '#fff',
+  fontWeight: 'bold',
+  fontSize: 16
+}}>
+  {isLogin ? 'Login' : 'Sign Up'}
+</Text>
+
+</TouchableOpacity>
+
+{/* TOGGLE */}
+<TouchableOpacity
+  onPress={() => setIsLogin(!isLogin)}
+  style={{ marginTop: 20 }}
+>
+  <Text style={{
+    color: activeTheme.accent,
+    textAlign: 'center'
+  }}>
+    {isLogin
+      ? "Don't have an account? Sign Up"
+      : "Already have an account? Login"}
+  </Text>
+</TouchableOpacity>
 
   </MotiView>
 )}
@@ -1323,8 +1471,11 @@ useEffect(() => {
 <View style={{ alignItems: 'center', marginBottom: 20 }}>
   <View style={{
   flexDirection: 'row',
-  justifyContent: 'space-around',
-  marginBottom: 20
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  marginBottom: 25,
+  paddingHorizontal: 10,
+  gap: 20
 }}>
 
   <View style={{ alignItems: 'center' }}>
@@ -1400,7 +1551,13 @@ useEffect(() => {
 }}>
 
   <TouchableOpacity
-    onPress={() => setShowResetConfirm(true)}
+    onPress={async () => {
+
+  await AsyncStorage.removeItem('isLoggedIn');
+
+  setCurrentView('onboarding');
+
+}}
     style={{
       backgroundColor: '#dc2626',
       paddingHorizontal: 20,
@@ -1409,7 +1566,7 @@ useEffect(() => {
     }}
   >
     <Text style={{ color: '#fff', fontWeight: 'bold' }}>
-      Reset
+      Logout
     </Text>
   </TouchableOpacity>
 
@@ -1432,6 +1589,7 @@ useEffect(() => {
           <MovieDialoguePage activeTheme={activeTheme} handleTapWord={handleTapWord} />
         </View>
 
+{currentView !== 'onboarding' && (
         <View style={styles.bottomNav}>
           <View style={[styles.navContainer, { backgroundColor: activeTheme.card, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)' }]}>
             <TouchableOpacity onPress={() => setCurrentView('home')}>
@@ -1450,7 +1608,7 @@ useEffect(() => {
               <LayoutDashboard size={24} color={currentView === 'dashboard' ? activeTheme.accent : activeTheme.text} />
             </TouchableOpacity>
           </View>
-        </View>
+        </View>)}
       </SafeAreaView>
 
 
@@ -1516,7 +1674,7 @@ useEffect(() => {
     }}>
       
       <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold' }}>
-        Reset Profile
+       Logout
       </Text>
 
       <Text style={{ color: '#aaa', marginVertical: 15 }}>
