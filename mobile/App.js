@@ -951,6 +951,58 @@ useEffect(() => {
 
 {/* NAME + AGE */}
 <View style={{ alignItems: 'center', marginBottom: 20 }}>
+  <View style={{
+  flexDirection: 'row',
+  justifyContent: 'space-around',
+  marginBottom: 20
+}}>
+
+  <View style={{ alignItems: 'center' }}>
+    <Text style={{ color: activeTheme.text, fontSize: 18, fontWeight: 'bold' }}>
+      {bookmarks.length}
+    </Text>
+    <Text style={{ color: activeTheme.subText, fontSize: 10 }}>
+      IN QUEUE
+    </Text>
+  </View>
+
+  <View style={{ alignItems: 'center' }}>
+    <Text style={{ color: activeTheme.text, fontSize: 18, fontWeight: 'bold' }}>
+      {learned.length}
+    </Text>
+    <Text style={{ color: activeTheme.subText, fontSize: 10 }}>
+      LEARNED
+    </Text>
+  </View>
+
+  <View style={{ alignItems: 'center' }}>
+    <Text style={{ color: activeTheme.text, fontSize: 18, fontWeight: 'bold' }}>
+      {progressPercent}%
+    </Text>
+    <Text style={{ color: activeTheme.subText, fontSize: 10 }}>
+      PROGRESS
+    </Text>
+  </View>
+
+</View>
+<View style={{
+  backgroundColor: activeTheme.card,
+  padding: 16,
+  borderRadius: 16,
+  marginBottom: 20
+}}>
+  <Text style={{ color: activeTheme.subText, fontSize: 10 }}>
+    WORD OF THE DAY
+  </Text>
+
+  <Text style={{
+    color: activeTheme.text,
+    fontSize: 20,
+    fontWeight: 'bold'
+  }}>
+    {wordOfTheDay}
+  </Text>
+</View>
 
   <Text style={{
     color: activeTheme.text,
