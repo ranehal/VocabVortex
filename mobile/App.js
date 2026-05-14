@@ -14,10 +14,10 @@ import {
   Modal,
   ActivityIndicator,
   Canvas,
-  Alert ,  // Added This Later
-  
+  Alert,
+  Keyboard,
+  FlatList,
   Image
-
 } from 'react-native';
 import {
   ChevronRight,
@@ -34,7 +34,11 @@ import {
   Info,
   User as UserIcon,
   Volume2,
-  BookOpen   // ✅ ADD THIS
+  BookOpen,
+  Clapperboard,
+  Search,
+  Upload,
+  Clock
 } from 'lucide-react-native';
 import { MotiView, AnimatePresence } from 'moti';
 import { StatusBar } from 'expo-status-bar';
@@ -48,58 +52,34 @@ WebBrowser.maybeCompleteAuthSession();
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const API_BASE = "http://localhost:3000"; 
 
-// --- Shooting Star Component (High Speed Streak) ---
-// Eita ekhon ekdom bijli-r moto screen cross korbe
-// const ShootingStar = ({ delay = 0 }) => {
-//   return (
-//     <MotiView
-//       from={{ 
-//         left: -50, 
-//         top: Math.random() * (SCREEN_HEIGHT / 3),
-//         opacity: 0,
-//         scaleX: 0.5
-//       }}
-//       animate={{ 
-//         left: SCREEN_WIDTH + 50, 
-//         top: SCREEN_HEIGHT * 0.7,
-//         opacity: [0, 1, 1, 0],
-//         scaleX: 2.5
-//       }}
-//       transition={{ 
-//         duration: 700, 
-//         loop: true, 
-//         delay: 3000 + delay,
-//         type: 'timing',
-//         repeatReverse: false
-//       }}
-//       style={styles.shootingStarLine}
-//     />
-//   );
-// };
-
 const StarField = () => {
   return (
     <View style={[StyleSheet.absoluteFill, { backgroundColor: '#000' }]}>
-      {[...Array(40)].map((_, i) => (
-        <MotiView
-          key={i}
-          from={{ opacity: 0.2 }}
-          animate={{ opacity: [0.2, 1, 0.2] }}
-          transition={{ duration: 2000 + Math.random() * 3000, loop: true, type: 'timing', delay: Math.random() * 5000 }}
-          style={{
-            position: 'absolute',
-            top: Math.random() * SCREEN_HEIGHT,
-            left: Math.random() * SCREEN_WIDTH,
-            width: 2,
-            height: 2,
-            backgroundColor: '#fff',
-            borderRadius: 1,
-          }}
-        />
-      ))}
-      {/* <ShootingStar delay={0} />
-      <ShootingStar delay={4500} /> //Shooting start problem so not added now
-      <ShootingStar delay={9000} /> */}
+      {[...Array(80)].map((_, i) => {
+        const size = Math.random() * 3 + 1;
+        return (
+          <MotiView
+            key={i}
+            from={{ opacity: 0, scale: 0.5 }}
+            animate={{ opacity: [0, 1, 0], scale: [0.5, 1.2, 0.5] }}
+            transition={{ duration: 1500 + Math.random() * 2000, loop: true, type: 'timing', delay: Math.random() * 3000 }}
+            style={{
+              position: 'absolute',
+              top: Math.random() * SCREEN_HEIGHT,
+              left: Math.random() * SCREEN_WIDTH,
+              width: size,
+              height: size,
+              backgroundColor: '#fff',
+              borderRadius: size / 2,
+              shadowColor: '#fff',
+              shadowOffset: { width: 0, height: 0 },
+              shadowOpacity: 0.8,
+              shadowRadius: size,
+              elevation: 5
+            }}
+          />
+        );
+      })}
     </View>
   );
 };
@@ -125,9 +105,6 @@ const levelWordsMap = {
   'TOEFL': ['Interdependence', 'Biodiversity', 'Sediment', 'Stratosphere', 'Chronological'],
   'GRE': ['Alacrity', 'Bellicose', 'Capricious', 'Ephemeral', 'Loquacious']
 };
-
-
-
 
 const BASE_URL = 'http://localhost:3000';
 const READFLOW_STORE_KEY = 'readflow_mobile_v1';
@@ -190,27 +167,24 @@ const ReadFlowPage = ({ activeTheme }) => {
   };
 
   const loadBooks = async () => {
-  try {
-    setLoadingBooks(true);
+    try {
+      setLoadingBooks(true);
 
-    const res = await fetch(`${BASE_URL}/api/books`);
-    const data = await res.json();
+      const res = await fetch(`${BASE_URL}/api/books`);
+      const data = await res.json();
 
-    console.log('Books from API:', data);
+      if (!res.ok) {
+        alert(data.error || 'Books load failed');
+        return;
+      }
 
-    if (!res.ok) {
-      alert(data.error || 'Books load failed');
-      return;
+      setBooks(data);
+    } catch (e) {
+      alert('Books load failed. Backend server running আছে কিনা check করো.');
+    } finally {
+      setLoadingBooks(false);
     }
-
-    setBooks(data);
-  } catch (e) {
-    console.log('Book load error:', e);
-    alert('Books load failed. Backend server running আছে কিনা check করো.');
-  } finally {
-    setLoadingBooks(false);
-  }
-};
+  };
 
   const persistReadFlow = async (nextState) => {
     try {
@@ -237,49 +211,47 @@ const ReadFlowPage = ({ activeTheme }) => {
   };
 
   const loadChapterText = async () => {
-  if (!selectedBook) {
-    alert('Please select a book first');
-    return;
-  }
-
-  if (!selectedChapter) {
-    alert('Please select a chapter first');
-    return;
-  }
-
-  try {
-    const url = `${BASE_URL}/api/books/${selectedBook._id}/chapters/${selectedChapter._id}`;
-    console.log('Loading chapter URL:', url);
-
-    const res = await fetch(url);
-    const data = await res.json();
-
-    if (!res.ok) {
-      alert(data.error || 'Failed to load chapter');
+    if (!selectedBook) {
+      alert('Please select a book first');
       return;
     }
 
-    if (!data.text) {
-      alert('No text found for this chapter');
+    if (!selectedChapter) {
+      alert('Please select a chapter first');
       return;
     }
 
-    setRawText(data.text);
+    try {
+      const url = `${BASE_URL}/api/books/${selectedBook._id}/chapters/${selectedChapter._id}`;
 
-    const parsedChunks = parseReadFlowText(data.text);
-    setChunks(parsedChunks);
+      const res = await fetch(url);
+      const data = await res.json();
 
-    persistReadFlow({
-      rawText: data.text,
-      chunks: parsedChunks,
-      selectedBookId: selectedBook._id,
-      selectedChapterId: selectedChapter._id,
-    });
-  } catch (e) {
-    console.log('Chapter load error:', e);
-    alert('Chapter load failed. Check console.');
-  }
-};
+      if (!res.ok) {
+        alert(data.error || 'Failed to load chapter');
+        return;
+      }
+
+      if (!data.text) {
+        alert('No text found for this chapter');
+        return;
+      }
+
+      setRawText(data.text);
+
+      const parsedChunks = parseReadFlowText(data.text);
+      setChunks(parsedChunks);
+
+      persistReadFlow({
+        rawText: data.text,
+        chunks: parsedChunks,
+        selectedBookId: selectedBook._id,
+        selectedChapterId: selectedChapter._id,
+      });
+    } catch (e) {
+      alert('Chapter load failed. Check console.');
+    }
+  };
 
   const clearText = () => {
     setRawText('');
@@ -531,6 +503,404 @@ const ReadFlowPage = ({ activeTheme }) => {
   );
 };
 
+const WheelPicker = ({ range, value, onChange, activeTheme }) => {
+  const itemHeight = 40;
+  const scrollViewRef = useRef(null);
+
+  const handleWheel = (e) => {
+    if (Platform.OS !== 'web') return;
+    if (e.deltaY > 0) onChange((value + 1) % range);
+    else onChange((value - 1 + range) % range);
+  };
+
+  useEffect(() => {
+    if (scrollViewRef.current) {
+      scrollViewRef.current.scrollTo({ y: value * itemHeight, animated: true });
+    }
+  }, [value]);
+
+  return (
+    <View 
+      style={{ height: itemHeight * 3, overflow: 'hidden', width: 50, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 8, borderWidth: 1, borderColor: activeTheme.accent }}
+      {...(Platform.OS === 'web' ? { onWheel: handleWheel } : {})}
+    >
+      <View style={{ position: 'absolute', top: itemHeight, height: itemHeight, width: '100%', backgroundColor: activeTheme.accent, opacity: 0.15 }} />
+      <ScrollView
+        ref={scrollViewRef}
+        showsVerticalScrollIndicator={false}
+        snapToInterval={itemHeight}
+        decelerationRate="fast"
+        onMomentumScrollEnd={(e) => {
+          const index = Math.round(e.nativeEvent.contentOffset.y / itemHeight);
+          if (index >= 0 && index < range && index !== value) onChange(index);
+        }}
+        contentContainerStyle={{ paddingVertical: itemHeight }}
+      >
+        {Array.from({ length: range }).map((_, i) => (
+          <TouchableOpacity 
+             key={i} 
+             style={{ height: itemHeight, justifyContent: 'center', alignItems: 'center' }}
+             onPress={() => onChange(i)}
+          >
+            <Text style={{ color: value === i ? activeTheme.accent : activeTheme.subText, fontSize: value === i ? 22 : 16, fontWeight: value === i ? 'bold' : 'normal' }}>
+              {i.toString().padStart(2, '0')}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+    </View>
+  );
+};
+
+const MovieDialoguePage = ({ activeTheme, handleTapWord }) => {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [movies, setMovies] = useState([]);
+  const [movieSuggestions, setMovieSuggestions] = useState([]);
+  const [selectedMovie, setSelectedMovie] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [dialogues, setDialogues] = useState([]);
+  const [filterSpeaker, setFilterSpeaker] = useState('All');
+  const [subtitleSearch, setSubtitleSearch] = useState('');
+  const [showImport, setShowImport] = useState(false);
+  const [importData, setImportData] = useState({ title: '', year: '', srt: '', translate: false });
+  const [onlineQuery, setOnlineQuery] = useState('');
+  const [onlineResults, setOnlineResults] = useState([]);
+  const [selectedOnline, setSelectedOnline] = useState(null);
+  const [onlineSubs, setOnlineSubs] = useState([]);
+  
+  const [jumpH, setJumpH] = useState(0);
+  const [jumpM, setJumpM] = useState(0);
+  const [jumpS, setJumpS] = useState(0);
+  const [translatingLine, setTranslatingLine] = useState(null);
+  const [highlightedIndex, setHighlightedIndex] = useState(null);
+  const flatListRef = useRef(null);
+  const webScrollRef = useRef(null);
+
+  const speakers = useMemo(() => {
+    const s = new Set(dialogues.map(d => d.speaker).filter(Boolean));
+    return ['All', ...Array.from(s)];
+  }, [dialogues]);
+
+  const filteredDialogues = useMemo(() => {
+    let result = dialogues;
+    if (filterSpeaker !== 'All') result = result.filter(d => d.speaker === filterSpeaker);
+    if (subtitleSearch) {
+      const q = subtitleSearch.toLowerCase();
+      result = result.filter(d => d.en.toLowerCase().includes(q) || (d.bn && d.bn.toLowerCase().includes(q)));
+    }
+    return result;
+  }, [dialogues, filterSpeaker, subtitleSearch]);
+
+  const timeToSeconds = (ts) => {
+    if (!ts) return 0;
+    const pts = ts.split(':');
+    return (parseInt(pts[0]) * 3600) + (parseInt(pts[1]) * 60) + parseInt(pts[2] || 0);
+  };
+
+  useEffect(() => { fetchMovies(''); }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => fetchMovieSuggestions(searchQuery), 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (onlineQuery.length >= 3) searchOnline(onlineQuery);
+      else if (onlineQuery.length === 0) setOnlineResults([]);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [onlineQuery]);
+
+  const fetchMovies = async (q = '') => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${BASE_URL}/api/movies${q ? `?q=${q}` : ''}`);
+      const data = await res.json();
+      setMovies(Array.isArray(data) ? data : []);
+    } catch (e) { } finally { setLoading(false); }
+  };
+
+  const fetchMovieSuggestions = async (query = '') => {
+    try {
+      const res = await fetch(`${BASE_URL}/api/movies${query ? `?q=${query}` : ''}`);
+      const local = await res.json();
+      let external = [];
+      if (query.length >= 3) {
+        const extRes = await fetch(`${BASE_URL}/api/movies/external-search?q=${encodeURIComponent(query)}`);
+        const extData = await extRes.json();
+        external = (extData || []).map(m => ({ ...m, isExternal: true, posterEmoji: '🌐' }));
+      }
+      setMovieSuggestions([...(local || []), ...external]);
+    } catch (e) { }
+  };
+
+  const selectSuggestion = async (movie) => {
+    setLoading(true);
+    setSearchQuery('');
+    setMovieSuggestions([]);
+    if (!movie.isExternal) return selectMovie(movie);
+    try {
+      const res = await fetch(`${BASE_URL}/api/movies/import-external`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imdbId: movie.imdbId, title: movie.title, year: movie.year })
+      });
+      const data = await res.json();
+      if (!res.ok) alert(data.error);
+      else selectMovie(data);
+    } catch (e) { alert("Import failed"); setLoading(false); }
+  };
+
+  const selectMovie = async (movie) => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${BASE_URL}/api/movies/${movie._id}`);
+      const data = await res.json();
+      setSelectedMovie(data);
+      setDialogues(data.dialogues || []);
+      setFilterSpeaker('All');
+    } catch (e) { } finally { setLoading(false); }
+  };
+
+  const translateLine = async (index, text) => {
+    setTranslatingLine(index);
+    try {
+      const res = await fetch(`${BASE_URL}/api/movies/translate-line`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text })
+      });
+      const data = await res.json();
+      if (data.bn) {
+        setDialogues(prev => {
+          const next = [...prev];
+          next[index] = { ...next[index], bn: data.bn };
+          return next;
+        });
+      }
+    } catch (e) { } finally { setTranslatingLine(null); }
+  };
+
+  const handleJump = () => {
+    const targetSec = (jumpH * 3600) + (jumpM * 60) + jumpS;
+    const index = filteredDialogues.findIndex(d => timeToSeconds(d.timestamp) >= targetSec);
+    if (index !== -1) {
+      try {
+        const offset = index * 122; // matches getItemLayout length
+
+        if (Platform.OS === 'web' && webScrollRef.current) {
+          if (typeof webScrollRef.current.scrollTo === 'function') webScrollRef.current.scrollTo({ y: offset, animated: true });
+          else webScrollRef.current.scrollTop = offset;
+        } else if (flatListRef.current && typeof flatListRef.current.scrollToIndex === 'function') {
+          flatListRef.current.scrollToIndex({ index, animated: true, viewPosition: 0 });
+        } else if (flatListRef.current && typeof flatListRef.current.scrollToOffset === 'function') {
+          flatListRef.current.scrollToOffset({ offset, animated: true });
+        } else if (flatListRef.current && typeof flatListRef.current.scrollTo === 'function') {
+          flatListRef.current.scrollTo({ y: offset, animated: true });
+        }
+
+        setHighlightedIndex(index);
+        setTimeout(() => setHighlightedIndex(null), 3000); // Highlight for 3s
+
+        const realIdx = dialogues.indexOf(filteredDialogues[index]);
+        if (realIdx !== -1 && !filteredDialogues[index].bn) translateLine(realIdx, filteredDialogues[index].en);
+      } catch (err) {
+        console.warn('Jump failed', err);
+        alert('Unable to jump to the requested time.');
+      }
+    } else { alert("Time beyond subtitles."); }
+  };
+
+  const searchOnline = async (q) => {
+    try {
+      const res = await fetch(`${BASE_URL}/api/movies/external-search?q=${encodeURIComponent(q)}`);
+      setOnlineResults(await res.json());
+    } catch (e) { }
+  };
+
+  const fetchOnlineSubs = async (movie) => {
+    setSelectedOnline(movie);
+    try {
+      const res = await fetch(`${BASE_URL}/api/movies/external-subtitles?imdbId=${movie.imdbId}`);
+      setOnlineSubs(await res.json());
+    } catch (e) { }
+  };
+
+  const loadExternalSrt = (sub) => {
+     setImportData({ title: selectedOnline.title, year: selectedOnline.year, srt: `1\n00:00:01,000 --> 00:00:04,000\nExternal Subtitle Loaded.\n\n2\n00:00:05,000 --> 00:00:08,000\nTap any card to translate.`, translate: false });
+     setSelectedOnline(null);
+  };
+
+  const handleImport = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${BASE_URL}/api/movies/import-srt`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(importData)
+      });
+      if (res.ok) { setShowImport(false); fetchMovies(''); }
+    } catch (e) { } finally { setLoading(false); }
+  };
+
+  const renderDialogueText = (text) => {
+    return text.split(' ').map((word, i) => (
+      <TouchableOpacity key={i} onPress={() => handleTapWord(word)}>
+        <Text style={{ color: activeTheme.text, fontSize: 16, lineHeight: 24 }}>{word}{' '}</Text>
+      </TouchableOpacity>
+    ));
+  };
+
+  const renderItem = ({ item: d, index: i }) => {
+    const realIndex = dialogues.indexOf(d);
+    const isHighlighted = highlightedIndex === i;
+    return (
+      <TouchableOpacity 
+        activeOpacity={0.8} 
+        onPress={() => !d.bn && translateLine(realIndex, d.en)} 
+        style={{ 
+          padding: 20, 
+          backgroundColor: isHighlighted ? activeTheme.accent : activeTheme.card, 
+          borderRadius: 24, 
+          borderWidth: 1, 
+          borderColor: activeTheme.border,
+          marginBottom: 16,
+          elevation: 2,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 1 },
+          shadowOpacity: 0.1,
+          shadowRadius: 3
+        }}
+      >
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 }}>
+          <Text style={{ color: isHighlighted ? '#fff' : activeTheme.accent, fontWeight: 'bold', fontSize: 11, letterSpacing: 0.5 }}>{d.speaker?.toUpperCase() || ''}</Text>
+          <Text style={{ color: isHighlighted ? '#fff' : activeTheme.subText, fontSize: 11, fontFamily: 'monospace' }}>{d.timestamp}</Text>
+        </View>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+          {renderDialogueText(d.en)}
+        </View>
+        {d.bn && (
+          <Text style={{ 
+            color: isHighlighted ? '#fff' : activeTheme.accent, 
+            marginTop: 12, 
+            fontSize: 15, 
+            fontWeight: '600', 
+            lineHeight: 22,
+            borderTopWidth: 1,
+            borderTopColor: 'rgba(255,255,255,0.05)',
+            paddingTop: 10
+          }}>
+            {d.bn}
+          </Text>
+        )}
+        {translatingLine === realIndex && (
+          <View style={{ marginTop: 10, alignSelf: 'center' }}>
+            <ActivityIndicator size="small" color={isHighlighted ? '#fff' : activeTheme.accent} />
+          </View>
+        )}
+      </TouchableOpacity>
+    );
+  };
+
+  return (
+    <MotiView from={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} style={styles.viewContainer}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+        <Text style={{ color: activeTheme.text, fontSize: 24, fontWeight: '900' }}>MOVIE <Text style={{ color: activeTheme.accent }}>DIALOGUES</Text></Text>
+        {!selectedMovie && <TouchableOpacity onPress={() => setShowImport(true)} style={[styles.iconButton, { backgroundColor: activeTheme.card, borderColor: activeTheme.border, borderWidth: 1 }]}><Upload size={20} color={activeTheme.accent} /></TouchableOpacity>}
+      </View>
+
+      {!selectedMovie ? (
+        <>
+          <View style={{ flexDirection: 'row', gap: 10, marginBottom: 20 }}>
+            <TextInput style={{ flex: 1, borderRadius: 20, paddingHorizontal: 20, height: 60, fontSize: 16, fontWeight: '700', backgroundColor: activeTheme.card, color: activeTheme.text, borderColor: activeTheme.border, borderWidth: 1 }} placeholder="Search Local & Global Movies..." placeholderTextColor={activeTheme.subText} value={searchQuery} onChangeText={setSearchQuery} />
+          </View>
+          {movieSuggestions.length > 0 && searchQuery.length > 0 && (
+            <View style={{ backgroundColor: activeTheme.card, borderRadius: 16, padding: 10, marginTop: 10, borderWidth: 1, borderColor: activeTheme.border }}>
+              {movieSuggestions.slice(0, 5).map(m => (
+                <TouchableOpacity key={m._id || m.imdbId} onPress={() => selectSuggestion(m)} style={{ padding: 15, borderBottomWidth: 1, borderBottomColor: activeTheme.border, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                  <Text style={{ fontSize: 24 }}>{m.posterEmoji}</Text>
+                  <View><Text style={{ color: activeTheme.text, fontWeight: 'bold' }}>{m.title}</Text><Text style={{ color: activeTheme.subText, fontSize: 12 }}>{m.year}</Text></View>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+          <ScrollView style={{ marginTop: 20 }}>
+            {movies.map(m => (
+              <TouchableOpacity key={m._id} onPress={() => selectMovie(m)} style={{ padding: 20, backgroundColor: activeTheme.card, borderRadius: 20, marginBottom: 12, flexDirection: 'row', alignItems: 'center', gap: 15, borderWidth: 1, borderColor: activeTheme.border }}>
+                <Text style={{ fontSize: 30 }}>{m.posterEmoji}</Text>
+                <View style={{ flex: 1 }}><Text style={{ color: activeTheme.text, fontWeight: 'bold', fontSize: 18 }}>{m.title}</Text><Text style={{ color: activeTheme.subText }}>{m.year}</Text></View>
+                <ChevronRight size={20} color={activeTheme.subText} />
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </>
+      ) : (
+        <View style={{ flex: 1 }}>
+          <TouchableOpacity onPress={() => setSelectedMovie(null)} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 15 }}><X size={20} color={activeTheme.subText} /><Text style={{ color: activeTheme.subText, fontWeight: 'bold' }}>BACK</Text></TouchableOpacity>
+          <View style={[styles.heroCard, { backgroundColor: activeTheme.card, padding: 20, borderRadius: 24, borderWidth: 1, borderColor: activeTheme.border }]}>
+            <Text style={{ color: activeTheme.text, fontSize: 22, fontWeight: 'bold' }} numberOfLines={1}>{selectedMovie.title}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 15, backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: 16, padding: 12, borderWidth: 1, borderColor: activeTheme.accent }}>
+              <Clock size={16} color={activeTheme.accent} />
+              <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8 }}>
+                <WheelPicker range={24} value={jumpH} onChange={setJumpH} activeTheme={activeTheme} />
+                <Text style={{ color: activeTheme.text, fontWeight: 'bold', fontSize: 24 }}>:</Text>
+                <WheelPicker range={60} value={jumpM} onChange={setJumpM} activeTheme={activeTheme} />
+                <Text style={{ color: activeTheme.text, fontWeight: 'bold', fontSize: 24 }}>:</Text>
+                <WheelPicker range={60} value={jumpS} onChange={setJumpS} activeTheme={activeTheme} />
+              </View>
+              <TouchableOpacity onPress={handleJump} style={{ backgroundColor: activeTheme.accent, paddingHorizontal: 15, paddingVertical: 10, borderRadius: 12 }}><Text style={{ color: '#fff', fontWeight: 'bold' }}>JUMP</Text></TouchableOpacity>
+            </View>
+          </View>
+          <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: activeTheme.card, borderRadius: 14, paddingHorizontal: 15, marginVertical: 15, borderWidth: 1, borderColor: activeTheme.border }}>
+             <Search size={16} color={activeTheme.subText} /><TextInput placeholder="Find word..." placeholderTextColor={activeTheme.subText} style={{ flex: 1, height: 44, color: activeTheme.text, marginLeft: 10 }} value={subtitleSearch} onChangeText={setSubtitleSearch} />
+          </View>
+          {Platform.OS === 'web' ? (
+            <ScrollView
+              ref={webScrollRef}
+              style={{ maxHeight: '70vh', overflowY: 'auto' }}
+              contentContainerStyle={{ paddingBottom: 100 }}
+              showsVerticalScrollIndicator={true}
+            >
+              {filteredDialogues.map((d, i) => renderItem({ item: d, index: i }))}
+            </ScrollView>
+          ) : (
+            <FlatList
+              ref={flatListRef}
+              data={filteredDialogues}
+              keyExtractor={(item, index) => index.toString()}
+              renderItem={renderItem}
+              showsVerticalScrollIndicator={true}
+              contentContainerStyle={{ paddingBottom: 100 }}
+              onScrollToIndexFailed={info => {
+                const offset = info.index * 130; // Rough estimate for fallback
+                try {
+                  if (flatListRef.current?.scrollToOffset) flatListRef.current.scrollToOffset({ offset, animated: true });
+                } catch (e) {
+                  console.warn('onScrollToIndexFailed fallback failed', e);
+                }
+              }}
+            />
+          )}
+        </View>
+      )}
+
+      <Modal visible={showImport} transparent animationType="slide">
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'flex-end' }}>
+          <View style={{ height: '90%', borderTopLeftRadius: 35, borderTopRightRadius: 35, padding: 25, backgroundColor: '#0a0a0a', borderColor: activeTheme.border, borderWidth: 1 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 }}><Text style={{ color: '#fff', fontSize: 20, fontWeight: 'bold' }}>IMPORT SUBTITLES</Text><TouchableOpacity onPress={() => setShowImport(false)}><X size={24} color="#fff" /></TouchableOpacity></View>
+            <ScrollView>
+              <TextInput placeholder="Movie Title" placeholderTextColor="#666" style={{ borderRadius: 12, padding: 15, backgroundColor: '#1a1a1a', color: '#fff', borderColor: activeTheme.border, borderWidth: 1, marginBottom: 12 }} value={importData.title} onChangeText={t => setImportData({ ...importData, title: t })} />
+              <TextInput multiline placeholder="Paste SRT..." placeholderTextColor="#666" style={{ borderRadius: 12, padding: 15, backgroundColor: '#1a1a1a', color: '#fff', height: 150, borderColor: activeTheme.border, borderWidth: 1, textAlignVertical: 'top' }} value={importData.srt} onChangeText={t => setImportData({ ...importData, srt: t })} />
+              <TouchableOpacity onPress={handleImport} style={{ backgroundColor: activeTheme.accent, width: '100%', marginTop: 20, padding: 15, borderRadius: 12, alignItems: 'center' }}><Text style={{ color: '#fff', fontWeight: 'bold' }}>FINALIZE IMPORT</Text></TouchableOpacity>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+    </MotiView>
+  );
+};
+
 export default function App() {
   const [themeKey, setThemeKey] = useState('amoled');
   const [currentView, setCurrentView] = useState('onboarding');
@@ -769,10 +1139,10 @@ useEffect(() => {
           </View>
         </View>
 
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <ScrollView style={{ display: currentView !== 'movie' ? 'flex' : 'none' }} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           <AnimatePresence exitBeforeEnter>
             {currentView === 'onboarding' && (
-  <MotiView key="onboarding" from={{ opacity: 0 }} animate={{ opacity: 1 }} style={styles.viewContainer}>
+  <MotiView key="onboarding" from={{ opacity: 0 }} animate={{ opacity: 1 }} style={[styles.viewContainer, { flex: 1, justifyContent: 'center' }]}>
     
     <Text style={[styles.heroTitle, { color: activeTheme.text }]}>
       Welcome to <Text style={{ color: activeTheme.subText }}>VocabVortex</Text>
@@ -1058,6 +1428,10 @@ useEffect(() => {
           </AnimatePresence>
         </ScrollView>
 
+        <View style={{ display: currentView === 'movie' ? 'flex' : 'none', flex: 1 }}>
+          <MovieDialoguePage activeTheme={activeTheme} handleTapWord={handleTapWord} />
+        </View>
+
         <View style={styles.bottomNav}>
           <View style={[styles.navContainer, { backgroundColor: activeTheme.card, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)' }]}>
             <TouchableOpacity onPress={() => setCurrentView('home')}>
@@ -1066,6 +1440,10 @@ useEffect(() => {
 
             <TouchableOpacity onPress={() => setCurrentView('readflow')}>
               <BookOpen size={24} color={currentView === 'readflow' ? activeTheme.accent : activeTheme.text} />
+            </TouchableOpacity>
+
+            <TouchableOpacity onPress={() => setCurrentView('movie')}>
+              <Clapperboard size={24} color={currentView === 'movie' ? activeTheme.accent : activeTheme.text} />
             </TouchableOpacity>
 
             <TouchableOpacity onPress={() => setCurrentView('dashboard')}>
@@ -1304,23 +1682,30 @@ const styles = StyleSheet.create({
   navContainer: { flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', paddingVertical: 20, borderRadius: 32 },
   dashboardProfile: { flexDirection: 'row', alignItems: 'center', gap: 15, marginBottom: 30 },
   profilePic: { width: 50, height: 50, borderRadius: 25, borderWidth: 2, borderColor: '#fff' },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.95)', justifyContent: 'flex-end' },
-  detailModal: { height: '90%', borderTopLeftRadius: 40, borderTopRightRadius: 40, padding: 32, borderWidth: 1 },
-  modalLoader: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  modalHeaderInner: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 30 },
-  modalWord: { fontSize: 48, fontWeight: '900', letterSpacing: -2 },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center' },
+  detailModal: { 
+    width: Platform.OS === 'web' ? Math.min(SCREEN_WIDTH * 0.9, 500) : '94%', 
+    maxHeight: '90%', 
+    borderRadius: 35, 
+    padding: 20, 
+    borderWidth: 1,
+    overflow: 'hidden'
+  },
+  modalLoader: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 50 },
+  modalHeaderInner: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 25 },
+  modalWord: { fontSize: 38, fontWeight: '900', letterSpacing: -1 },
   modalSpeakerBtn: { padding: 10, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 16 },
-  modalPhonetic: { fontSize: 16, fontWeight: '700' },
+  modalPhonetic: { fontSize: 14, fontWeight: '700' },
   modalClose: { padding: 8, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 12 },
-  modalMeaningCard: { padding: 24, borderRadius: 24, marginBottom: 32 },
-  modalMeaning: { fontSize: 28, fontWeight: '900', textAlign: 'center' },
-  drillSection: { gap: 16, marginBottom: 40 },
-  drillCard: { padding: 20, backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 20, borderLeftWidth: 4 },
-  drillSentence: { fontSize: 18, fontWeight: '700', marginBottom: 8, lineHeight: 24 },
+  modalMeaningCard: { padding: 20, borderRadius: 20, marginBottom: 25 },
+  modalMeaning: { fontSize: 24, fontWeight: '900', textAlign: 'center' },
+  drillSection: { gap: 12, marginBottom: 30 },
+  drillCard: { padding: 15, backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 16, borderLeftWidth: 4 },
+  drillSentence: { fontSize: 16, fontWeight: '700', marginBottom: 6, lineHeight: 22 },
   drillExplanationRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
-  drillExplanation: { fontSize: 13, flex: 1, lineHeight: 18 },
-  modalActions: { flexDirection: 'row', gap: 12, paddingBottom: 20 },
-  modalBtn: { flex: 1, height: 60, borderRadius: 20, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 10 },
+  drillExplanation: { fontSize: 12, flex: 1, lineHeight: 18 },
+  modalActions: { flexDirection: 'row', gap: 12, paddingBottom: 10 },
+  modalBtn: { flex: 1, height: 55, borderRadius: 18, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8 },
   modalBtnText: { fontWeight: '900', fontSize: 12, letterSpacing: 1 },
   modal: { position: 'absolute', bottom: 0, left: 0, right: 0, height: '80%', backgroundColor: '#000', borderTopLeftRadius: 40, borderTopRightRadius: 40, padding: 32, zIndex: 100 },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 40 },
