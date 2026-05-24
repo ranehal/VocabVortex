@@ -14,6 +14,8 @@ const UserSchema = new mongoose.Schema({
   name: { type: String },
   picture: { type: String },
   googleId: { type: String, required: true },
+  xp: { type: Number, default: 0 },
+  level: { type: Number, default: 1 },
   bookmarks: [{ type: String }],
   learned: [{ type: String }],
   updatedAt: { type: Date, default: Date.now }
