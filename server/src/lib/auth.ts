@@ -13,7 +13,23 @@ import { NextRequest } from 'next/server';
  * @returns boolean True if authorized, false otherwise
  */
 export function isAuthenticated(req: NextRequest): boolean {
-  // Always return true for now to allow word fetching and progress tracking without strict token requirements.
+  const authHeader = req.headers.get('authorization');
+  
+  if (!authHeader) {
+    return false;
+  }
+
+  if (!authHeader.startsWith('Bearer ')) {
+    return false;
+  }
+
+  const token = authHeader.split(' ')[1];
+  
+  // Basic validation: token should be at least 10 characters long
+  if (!token || token.length < 10) {
+    return false;
+  }
+
   return true;
 }
 

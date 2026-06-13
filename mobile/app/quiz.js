@@ -6,9 +6,9 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { X, Check, ArrowRight, Award, Sparkles, AlertCircle } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import LoadingSpinner from '../components/LoadingSpinner';
+import { BASE_URL as API_BASE } from '../constants';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const API_BASE = "http://localhost:3000";
 
 const SYNONYM_MAP = {
   'Resilient': 'Tough',
@@ -51,25 +51,57 @@ export default function Quiz() {
     const b = await AsyncStorage.getItem('vortex_bookmarks');
     const bookmarks = b ? JSON.parse(b) : [];
     
-    if (bookmarks.length < 3) {
-      alert("Add at least 3 words to your lab to start a quiz!");
-      router.back();
-      return;
-    }
+    let wordPool = bookmarks.length >= 3 ? bookmarks : [
+      "Resilient", "Eloquent", "Ephemeral", "Luminous", "Sovereign", 
+      "Cunning", "Enormous", "Rapid", "Jubilant", "Gloomy"
+    ];
 
-    const optionsPool = ["Tough", "Fluent", "Short-lived", "Bright", "Ruler", "Clever", "Huge", "Quick", "Happy", "Sad", "Careful", "Practical", "Luck"];
+    // Pick 5-10 random words
+    const shuffledPool = [...wordPool].sort(() => 0.5 - Math.random()).slice(0, 10);
+    const optionsPool = ["Tough", "Fluent", "Short-lived", "Bright", "Ruler", "Clever", "Huge", "Quick", "Happy", "Sad", "Careful", "Practical", "Luck", "Swift", "Brave"];
     
-    const mockQuestions = bookmarks.map(word => {
-      const correct = SYNONYM_MAP[word] || "Superior";
-      const wrong = optionsPool.filter(o => o !== correct).sort(() => Math.random() - 0.5).slice(0, 3);
-      return {
-        word,
-        correct,
-        options: [...wrong, correct].sort(() => Math.random() - 0.5)
-      };
-    });
+    try {
+      const res = await fetch(`${API_BASE}/api/words/details`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ words: shuffledPool })
+      });
+      const data = await res.json();
+      
+      const qData = data.map(item => {
+        let correct = 'Superior';
+        if (item.synonyms && item.synonyms.length > 0 && item.synonyms[0] !== '...') {
+          correct = item.synonyms[0];
+        } else if (SYNONYM_MAP[item.word]) {
+          correct = SYNONYM_MAP[item.word];
+        } else if (SYNONYM_MAP[item.word.charAt(0).toUpperCase() + item.word.slice(1).toLowerCase()]) {
+          correct = SYNONYM_MAP[item.word.charAt(0).toUpperCase() + item.word.slice(1).toLowerCase()];
+        }
 
-    setQuizData(mockQuestions);
+        const wrong = optionsPool.filter(o => o.toLowerCase() !== correct.toLowerCase()).sort(() => Math.random() - 0.5).slice(0, 3);
+        return {
+          word: item.word,
+          correct,
+          options: [...wrong, correct].sort(() => Math.random() - 0.5)
+        };
+      });
+
+      // Filter out invalid questions
+      setQuizData(qData.filter(q => q.word !== '...' && q.correct !== '...'));
+    } catch (e) {
+      console.error("Failed to generate quiz:", e);
+      const fallbackQs = shuffledPool.map(word => {
+        const correct = SYNONYM_MAP[word] || "Expert";
+        const wrong = optionsPool.filter(o => o !== correct).sort(() => Math.random() - 0.5).slice(0, 3);
+        return {
+          word,
+          correct,
+          options: [...wrong, correct].sort(() => Math.random() - 0.5)
+        };
+      });
+      setQuizData(fallbackQs);
+    }
+    
     setLoading(false);
   };
 
@@ -97,12 +129,22 @@ export default function Quiz() {
     setIsFinished(true);
     try {
       const email = await AsyncStorage.getItem('userEmail') || 'guest@vortex.com';
+      const name = await AsyncStorage.getItem('userName') || 'Explorer';
+      const avatar = await AsyncStorage.getItem('vortex_avatar') || '🚀';
+      
       await fetch(`${API_BASE}/api/user/xp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, xpToAdd: score })
+        body: JSON.stringify({ 
+          email, 
+          xpToAdd: score,
+          name,
+          picture: avatar
+        })
       });
-    } catch (e) { }
+    } catch (e) {
+      console.error("Failed to sync quiz XP:", e);
+    }
   };
 
   if (loading) return <View style={{ flex: 1, backgroundColor: activeTheme.bg }}><LoadingSpinner activeTheme={activeTheme} text="PREPARING ARENA..." /></View>;

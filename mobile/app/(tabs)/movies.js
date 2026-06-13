@@ -1,12 +1,49 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, FlatList, Platform, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, FlatList, Platform, ActivityIndicator, Dimensions } from 'react-native';
 import { MotiView } from 'moti';
 import { useApp } from '../_layout';
-import { Search, Upload, Clock, X, ChevronRight } from 'lucide-react-native';
+import { Search, Upload, Clock, X, ChevronRight, Play, FileVideo } from 'lucide-react-native';
 import WheelPicker from '../../components/WheelPicker';
 import LoadingSpinner from '../../components/LoadingSpinner';
+import { Video, ResizeMode } from 'expo-av';
+import * as DocumentPicker from 'expo-document-picker';
+import { BASE_URL } from '../../constants';
 
-const BASE_URL = 'http://localhost:3000';
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
+function parseSRT(srt) {
+  const lines = srt.replace(/\r/g, '').split('\n');
+  const dialogues = [];
+  let current = {};
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+    if (/^\d+$/.test(line)) {
+      if (current.en) dialogues.push(current);
+      current = {};
+    } else if (line.includes('-->')) {
+      const parts = line.split(' --> ');
+      current.timestamp = parts[0].split(',')[0];
+      // Store full timestamps for precision
+      current.startTime = timeToSecondsPrecision(parts[0].replace(',', '.'));
+      current.endTime = timeToSecondsPrecision(parts[1].replace(',', '.'));
+    } else {
+      current.en = current.en ? `${current.en} ${line}` : line;
+    }
+  }
+  if (current.en) dialogues.push(current);
+  return dialogues;
+}
+
+function timeToSecondsPrecision(ts) {
+  if (!ts) return 0;
+  const parts = ts.split(':');
+  const h = parseInt(parts[0]);
+  const m = parseInt(parts[1]);
+  const s = parseFloat(parts[2]);
+  return (h * 3600) + (m * 60) + s;
+}
 
 export default function Movies() {
   const { activeTheme, handleTapWord } = useApp();
@@ -31,6 +68,13 @@ export default function Movies() {
   const [highlightedIndex, setHighlightedIndex] = useState(null);
   const flatListRef = useRef(null);
 
+  // Local Movie State
+  const [localVideoUri, setLocalVideoUri] = useState(null);
+  const [localSubtitles, setLocalSubtitles] = useState([]);
+  const [showSubPicker, setShowSubPicker] = useState(false);
+  const [playbackPosition, setPlaybackPosition] = useState(0);
+  const videoRef = useRef(null);
+
   const speakers = useMemo(() => {
     const s = new Set(dialogues.map(d => d.speaker).filter(Boolean));
     return ['All', ...Array.from(s)];
@@ -45,6 +89,20 @@ export default function Movies() {
     }
     return result;
   }, [dialogues, filterSpeaker, subtitleSearch]);
+
+  const currentDialogue = useMemo(() => {
+    if (!localVideoUri || dialogues.length === 0) return null;
+    return dialogues.find(d => playbackPosition >= (d.startTime || 0) && playbackPosition <= (d.endTime || 0));
+  }, [dialogues, playbackPosition, localVideoUri]);
+
+  useEffect(() => {
+    if (currentDialogue && flatListRef.current) {
+        const index = dialogues.indexOf(currentDialogue);
+        if (index !== -1) {
+            flatListRef.current.scrollToIndex({ index, animated: true, viewPosition: 0.5 });
+        }
+    }
+  }, [currentDialogue]);
 
   const timeToSeconds = (ts) => {
     if (!ts) return 0;
@@ -158,13 +216,70 @@ export default function Movies() {
     );
   };
 
+  const handleSelectLocalMovie = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({ type: 'video/*' });
+      if (result.canceled) return;
+
+      const file = result.assets[0];
+      setLocalVideoUri(file.uri);
+      setLoading(true);
+      
+      // Search for subtitles based on filename
+      const res = await fetch(`${BASE_URL}/api/subtitles-search?q=${encodeURIComponent(file.name)}`);
+      if (!res.ok) throw new Error("Search failed");
+      const subs = await res.json();
+      setLocalSubtitles(subs);
+      setShowSubPicker(true);
+      setLoading(false);
+    } catch (e) {
+      alert("Failed to pick movie");
+      setLoading(false);
+    }
+  };
+
+  const selectSubtitle = async (sub) => {
+    setLoading(true);
+    try {
+        // If it's a mock, we don't have a real URL, but for demo we can mock the content
+        let srtContent = "";
+        if (sub.isMock) {
+            srtContent = `1\n00:00:01,000 --> 00:00:05,000\nHello, welcome to VocabVortex!\n\n2\n00:00:06,000 --> 00:00:10,000\nEnjoy your movie with live subtitles.`;
+        } else {
+            const res = await fetch(sub.url);
+            srtContent = await res.text();
+        }
+
+        const parsed = parseSRT(srtContent);
+        setDialogues(parsed);
+        setSelectedMovie({ title: sub.filename, isLocal: true });
+        setShowSubPicker(false);
+    } catch (e) {
+        alert("Failed to load subtitle");
+    } finally {
+        setLoading(false);
+    }
+  };
+
+  const handlePlaybackStatusUpdate = (status) => {
+    if (status.isLoaded) {
+      setPlaybackPosition(status.positionMillis / 1000);
+    }
+  };
+
   const renderItem = ({ item: d, index: i }) => {
     const realIndex = dialogues.indexOf(d);
-    const isHighlighted = highlightedIndex === i;
+    const isHighlighted = (highlightedIndex === i) || (currentDialogue === d);
     return (
       <TouchableOpacity 
         activeOpacity={0.8} 
-        onPress={() => !d.bn && translateLine(realIndex, d.en)} 
+        onPress={() => {
+            if (localVideoUri && videoRef.current) {
+                videoRef.current.setPositionAsync((d.startTime || 0) * 1000);
+            } else if (!d.bn) {
+                translateLine(realIndex, d.en);
+            }
+        }} 
         style={[styles.itemCard, { backgroundColor: isHighlighted ? activeTheme.accent : activeTheme.card, borderColor: activeTheme.border }]}
       >
         <View style={styles.itemHeader}>
@@ -184,7 +299,10 @@ export default function Movies() {
     <View style={[styles.container, { backgroundColor: activeTheme.bg }]}>
       <View style={styles.header}>
         <Text style={{ color: activeTheme.text, fontSize: 24, fontWeight: '900' }}>MOVIE <Text style={{ color: activeTheme.accent }}>DIALOGUES</Text></Text>
-        {!selectedMovie && <TouchableOpacity onPress={() => setShowImport(true)} style={[styles.iconButton, { backgroundColor: activeTheme.card, borderColor: activeTheme.border }]}><Upload size={20} color={activeTheme.accent} /></TouchableOpacity>}
+        <View style={{ flexDirection: 'row', gap: 10 }}>
+            {!selectedMovie && <TouchableOpacity onPress={handleSelectLocalMovie} style={[styles.iconButton, { backgroundColor: activeTheme.card, borderColor: activeTheme.border }]}><FileVideo size={20} color={activeTheme.accent} /></TouchableOpacity>}
+            {!selectedMovie && <TouchableOpacity onPress={() => setShowImport(true)} style={[styles.iconButton, { backgroundColor: activeTheme.card, borderColor: activeTheme.border }]}><Upload size={20} color={activeTheme.accent} /></TouchableOpacity>}
+        </View>
       </View>
 
       {!selectedMovie ? (
@@ -215,40 +333,87 @@ export default function Movies() {
               ))}
             </View>
           </ScrollView>
+
+          {showSubPicker && (
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.8)', padding: 20, justifyContent: 'center' }]}>
+                <View style={[styles.subPicker, { backgroundColor: activeTheme.card, borderColor: activeTheme.border }]}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 }}>
+                        <Text style={{ color: activeTheme.text, fontSize: 18, fontWeight: 'bold' }}>Select Subtitle</Text>
+                        <TouchableOpacity onPress={() => setShowSubPicker(false)}><X size={24} color={activeTheme.subText} /></TouchableOpacity>
+                    </View>
+                    <ScrollView>
+                        {localSubtitles.map(sub => (
+                            <TouchableOpacity key={sub.id} onPress={() => selectSubtitle(sub)} style={[styles.subItem, { borderBottomColor: activeTheme.border }]}>
+                                <Text style={{ color: activeTheme.text }}>{sub.filename}</Text>
+                                <Text style={{ color: activeTheme.subText, fontSize: 12 }}>{sub.language} - Rating: {sub.rating}</Text>
+                            </TouchableOpacity>
+                        ))}
+                    </ScrollView>
+                </View>
+            </View>
+          )}
         </View>
       ) : (
-        <View style={{ flex: 1, paddingHorizontal: 24 }}>
-          <TouchableOpacity onPress={() => setSelectedMovie(null)} style={styles.backBtn}><X size={20} color={activeTheme.subText} /><Text style={{ color: activeTheme.subText, fontWeight: 'bold' }}>BACK TO GALLERY</Text></TouchableOpacity>
-          <View style={[styles.heroCard, { backgroundColor: activeTheme.card, borderColor: activeTheme.border }]}>
-            <Text style={{ color: activeTheme.text, fontSize: 20, fontWeight: 'bold' }} numberOfLines={1}>{selectedMovie.title}</Text>
-            <View style={[styles.jumpBox, { backgroundColor: activeTheme.bg, borderColor: activeTheme.border }]}>
-              <Clock size={16} color={activeTheme.accent} />
-              <View style={styles.wheelContainer}>
-                <WheelPicker range={24} value={jumpH} onChange={setJumpH} activeTheme={activeTheme} />
-                <Text style={{ color: activeTheme.text, fontWeight: 'bold', fontSize: 24 }}>:</Text>
-                <WheelPicker range={60} value={jumpM} onChange={setJumpM} activeTheme={activeTheme} />
-                <Text style={{ color: activeTheme.text, fontWeight: 'bold', fontSize: 24 }}>:</Text>
-                <WheelPicker range={60} value={jumpS} onChange={setJumpS} activeTheme={activeTheme} />
-              </View>
-              <TouchableOpacity onPress={handleJump} style={[styles.jumpBtn, { backgroundColor: activeTheme.accent }]}><Text style={styles.jumpBtnText}>JUMP</Text></TouchableOpacity>
+        <View style={{ flex: 1 }}>
+          <View style={{ paddingHorizontal: 24 }}>
+            <TouchableOpacity onPress={() => { setSelectedMovie(null); setLocalVideoUri(null); }} style={styles.backBtn}><X size={20} color={activeTheme.subText} /><Text style={{ color: activeTheme.subText, fontWeight: 'bold' }}>BACK TO GALLERY</Text></TouchableOpacity>
+            
+            {localVideoUri ? (
+                <View style={styles.videoContainer}>
+                    <Video
+                        ref={videoRef}
+                        source={{ uri: localVideoUri }}
+                        rate={1.0}
+                        volume={1.0}
+                        isMuted={false}
+                        resizeMode={ResizeMode.CONTAIN}
+                        shouldPlay
+                        useNativeControls
+                        style={styles.video}
+                        onPlaybackStatusUpdate={handlePlaybackStatusUpdate}
+                    />
+                    {currentDialogue && (
+                        <View style={styles.subtitleOverlay}>
+                            <Text style={styles.subtitleText}>{currentDialogue.en}</Text>
+                        </View>
+                    )}
+                </View>
+            ) : (
+                <View style={[styles.heroCard, { backgroundColor: activeTheme.card, borderColor: activeTheme.border }]}>
+                    <Text style={{ color: activeTheme.text, fontSize: 20, fontWeight: 'bold' }} numberOfLines={1}>{selectedMovie.title}</Text>
+                    <View style={[styles.jumpBox, { backgroundColor: activeTheme.bg, borderColor: activeTheme.border }]}>
+                    <Clock size={16} color={activeTheme.accent} />
+                    <View style={styles.wheelContainer}>
+                        <WheelPicker range={24} value={jumpH} onChange={setJumpH} activeTheme={activeTheme} />
+                        <Text style={{ color: activeTheme.text, fontWeight: 'bold', fontSize: 24 }}>:</Text>
+                        <WheelPicker range={60} value={jumpM} onChange={setJumpM} activeTheme={activeTheme} />
+                        <Text style={{ color: activeTheme.text, fontWeight: 'bold', fontSize: 24 }}>:</Text>
+                        <WheelPicker range={60} value={jumpS} onChange={setJumpS} activeTheme={activeTheme} />
+                    </View>
+                    <TouchableOpacity onPress={handleJump} style={[styles.jumpBtn, { backgroundColor: activeTheme.accent }]}><Text style={styles.jumpBtnText}>JUMP</Text></TouchableOpacity>
+                    </View>
+                </View>
+            )}
+
+            <View style={[styles.findWordBox, { backgroundColor: activeTheme.card, borderColor: activeTheme.border, marginTop: 15 }]}>
+                <Search size={16} color={activeTheme.subText} /><TextInput placeholder="Find word in subtitles..." placeholderTextColor={activeTheme.subText} style={{ flex: 1, height: 44, color: activeTheme.text, marginLeft: 10 }} value={subtitleSearch} onChangeText={setSubtitleSearch} />
             </View>
           </View>
-          <View style={[styles.findWordBox, { backgroundColor: activeTheme.card, borderColor: activeTheme.border }]}>
-             <Search size={16} color={activeTheme.subText} /><TextInput placeholder="Find word in subtitles..." placeholderTextColor={activeTheme.subText} style={{ flex: 1, height: 44, color: activeTheme.text, marginLeft: 10 }} value={subtitleSearch} onChangeText={setSubtitleSearch} />
-          </View>
+
           <FlatList
             ref={flatListRef}
             data={filteredDialogues}
             keyExtractor={(item, index) => index.toString()}
             renderItem={renderItem}
             showsVerticalScrollIndicator={true}
-            contentContainerStyle={{ paddingBottom: 150 }}
+            contentContainerStyle={{ paddingBottom: 150, paddingHorizontal: 24 }}
             onScrollToIndexFailed={info => {
                flatListRef.current?.scrollToOffset({ offset: info.index * 122, animated: true });
             }}
           />
         </View>
       )}
+      {loading && <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' }]}><LoadingSpinner activeTheme={activeTheme} /></View>}
     </View>
   );
 }
@@ -271,5 +436,12 @@ const styles = StyleSheet.create({
   findWordBox: { flexDirection: 'row', alignItems: 'center', borderRadius: 14, paddingHorizontal: 15, marginBottom: 15, borderWidth: 1 },
   itemCard: { padding: 20, borderRadius: 24, borderWidth: 1, marginBottom: 16, justifyContent: 'center', minHeight: 110 },
   itemHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 },
-  loaderIcon: { position: 'absolute', right: 15, bottom: 15 }
+  loaderIcon: { position: 'absolute', right: 15, bottom: 15 },
+  subPicker: { padding: 20, borderRadius: 24, borderWidth: 1, maxHeight: '80%' },
+  subItem: { paddingVertical: 15, borderBottomWidth: 1 },
+  videoContainer: { width: '100%', aspectRatio: 16/9, borderRadius: 20, overflow: 'hidden', backgroundColor: '#000' },
+  video: { flex: 1 },
+  subtitleOverlay: { position: 'absolute', bottom: 40, left: 10, right: 10, alignItems: 'center' },
+  subtitleText: { color: '#fff', backgroundColor: 'rgba(0,0,0,0.6)', paddingHorizontal: 10, paddingVertical: 5, fontSize: 16, textAlign: 'center', borderRadius: 5 }
 });
+

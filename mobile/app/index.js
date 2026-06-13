@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Platform, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { MotiView } from 'moti';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -8,38 +8,57 @@ import * as Google from 'expo-auth-session/providers/google';
 import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
 import { User as UserIcon } from 'lucide-react-native';
-
-const BASE_URL = 'http://localhost:3000';
+import { BASE_URL, GOOGLE_WEB_CLIENT_ID } from '../constants';
 
 WebBrowser.maybeCompleteAuthSession();
 
 export default function SplashScreen() {
   const router = useRouter();
-  const { activeTheme, setUser } = useApp();
+  const { activeTheme, setUser, setBookmarks } = useApp();
   const [checking, setChecking] = useState(true);
+  const [authLoading, setAuthLoading] = useState(false);
 
-  // We define the redirect URI explicitly to avoid mismatches
+  // We define the redirect URI automatically for the environment
   const redirectUri = AuthSession.makeRedirectUri({
     scheme: 'vocab-vortex',
+    preferNoPersist: true,
   });
 
   const [request, response, promptAsync] = Google.useAuthRequest({
-    androidClientId: "YOUR_ANDROID_CLIENT_ID",
-    iosClientId: "YOUR_IOS_CLIENT_ID",
-    webClientId: "373930632450-c021sic727j75777v9s0k3ne58t9hohf.apps.googleusercontent.com",
-    redirectUri: Platform.OS === 'web' ? 'http://localhost:8081' : redirectUri,
+    androidClientId: GOOGLE_WEB_CLIENT_ID,
+    iosClientId: GOOGLE_WEB_CLIENT_ID,
+    webClientId: GOOGLE_WEB_CLIENT_ID,
+    scopes: ['openid', 'profile', 'email'],
+    responseType: 'id_token',
+    extraParams: {
+      nonce: 'vocab-vortex-nonce' // Needed for id_token on some platforms
+    }
   });
 
   useEffect(() => {
     if (request) {
-      console.log("👉 Requested Redirect URI:", redirectUri);
+      console.log("🌐 Auth Request Redirect URI:", request.redirectUri);
     }
   }, [request]);
 
   useEffect(() => {
+    if (response) {
+      console.log("🕵️ Full Auth Response:", JSON.stringify(response, null, 2));
+    }
     if (response?.type === 'success') {
-      const { authentication } = response;
-      handleGoogleLogin(authentication.idToken);
+      // Check both authentication object AND params (web often puts it in params)
+      const idToken = response.authentication?.idToken || response.params?.id_token;
+      
+      console.log("🔑 Extracted ID Token:", idToken ? "Exists (starts with " + idToken.substring(0, 10) + "...)" : "MISSING");
+      
+      if (idToken) {
+        handleGoogleLogin(idToken);
+      } else {
+        alert("Google Login failed: No ID Token found in response. Check Console.");
+      }
+    } else if (response?.type === 'error') {
+      console.error("❌ Auth error details:", response.error);
+      alert("Auth Error: " + (response.error?.message || "Unknown error"));
     }
   }, [response]);
 
@@ -61,24 +80,58 @@ export default function SplashScreen() {
   }, []);
 
   const handleGoogleLogin = async (idToken) => {
+    setAuthLoading(true);
     try {
+      console.log("Logging in with backend:", `${BASE_URL}/api/auth/google`);
       const res = await fetch(`${BASE_URL}/api/auth/google`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ idToken })
       });
       const data = await res.json();
+      
       if (res.ok) {
+        // Sync local bookmarks to account
+        const localBookmarks = await AsyncStorage.getItem('vortex_bookmarks');
+        const bookmarksArray = localBookmarks ? JSON.parse(localBookmarks) : [];
+        
+        const syncRes = await fetch(`${BASE_URL}/api/user`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            email: data.user.email,
+            name: data.user.name,
+            picture: data.user.picture,
+            googleId: data.user.googleId,
+            bookmarks: bookmarksArray
+          })
+        });
+        const syncedUser = await syncRes.json();
+        const finalUser = syncRes.ok ? syncedUser : data.user;
+
         await AsyncStorage.setItem('vortex_session', data.sessionToken);
-        await AsyncStorage.setItem('vortex_user', JSON.stringify(data.user));
-        setUser(data.user);
+        await AsyncStorage.setItem('vortex_user', JSON.stringify(finalUser));
+        await AsyncStorage.setItem('userEmail', finalUser.email);
+        await AsyncStorage.setItem('userName', finalUser.name);
+        
+        if (finalUser.bookmarks) {
+          await AsyncStorage.setItem('vortex_bookmarks', JSON.stringify(finalUser.bookmarks));
+          setBookmarks(finalUser.bookmarks);
+        }
+        
+        setUser(finalUser);
         
         const name = await AsyncStorage.getItem('userName');
         if (name) router.replace('/home');
         else router.replace('/onboarding');
+      } else {
+        alert("Server Auth Failed: " + (data.error || "Unknown error"));
       }
     } catch (e) {
-      alert("Auth failed. Check backend.");
+      console.error("Auth fetch failed:", e);
+      alert("Auth failed. Backend unreachable at " + BASE_URL);
+    } finally {
+      setAuthLoading(false);
     }
   };
 
@@ -110,13 +163,15 @@ export default function SplashScreen() {
            <TouchableOpacity 
              onPress={() => promptAsync()} 
              style={[styles.loginBtn, { backgroundColor: activeTheme.accent }]}
+             disabled={authLoading}
            >
-             <UserIcon color="#fff" size={20} />
-             <Text style={styles.loginText}>Sign in with Google</Text>
+             {authLoading ? <ActivityIndicator color="#fff" /> : <UserIcon color="#fff" size={20} />}
+             <Text style={styles.loginText}>{authLoading ? "Signing in..." : "Sign in with Google"}</Text>
            </TouchableOpacity>
            <TouchableOpacity 
              onPress={handleGuestLogin} 
              style={styles.guestBtn}
+             disabled={authLoading}
            >
              <Text style={{ color: activeTheme.subText }}>Continue as Guest</Text>
            </TouchableOpacity>

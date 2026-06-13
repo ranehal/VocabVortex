@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "jest",
+    "test:e2e": "cd ../tests/e2e && npm install && npm test"
   },
   "dependencies": {
     "@types/mongoose": "^5.11.96",

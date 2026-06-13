@@ -1,6 +1,6 @@
 import { Tabs } from 'expo-router';
 import { useApp } from '../_layout';
-import { Zap, BookOpen, Clapperboard, LayoutDashboard, Gamepad2 } from 'lucide-react-native';
+import { Zap, BookOpen, Clapperboard, LayoutDashboard, Gamepad2, StickyNote } from 'lucide-react-native';
 import { BlurView } from 'expo-blur';
 import { Platform, View } from 'react-native';
 
@@ -48,6 +48,12 @@ export default function TabLayout() {
         name="movies"
         options={{
           tabBarIcon: ({ color }) => <Clapperboard size={24} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="notes"
+        options={{
+          tabBarIcon: ({ color }) => <StickyNote size={24} color={color} />,
         }}
       />
       <Tabs.Screen

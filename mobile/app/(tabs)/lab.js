@@ -1,14 +1,14 @@
-import { useState, useEffect, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions, Modal } from 'react-native';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions, Modal, RefreshControl } from 'react-native';
 import { MotiView, AnimatePresence } from 'moti';
 import { useApp } from '../_layout';
 import { CheckCircle2, RotateCw, Trophy, Star, TrendingUp, ChevronRight, Palette, Settings, X } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import LoadingSpinner from '../../components/LoadingSpinner';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
+import { BASE_URL as API_BASE } from '../../constants';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const API_BASE = "http://localhost:3000";
 
 export default function Lab() {
   const { activeTheme, user, setTheme, themeKey, themes, avatar, setAvatar, avatars } = useApp();
@@ -16,36 +16,49 @@ export default function Lab() {
   const [userName, setUserName] = useState('');
   const [bookmarks, setBookmarks] = useState([]);
   const [learned, setLearned] = useState([]);
-  const [leaderboard, setLeaderboard] = useState([
-    { name: 'nehal2', xp: 2450, avatar: '🚀' },
-    { name: 'arafat', xp: 2100, avatar: '🦊' },
-    { name: 'user11', xp: 1850, avatar: '🤖' },
-    { name: 'sakib', xp: 1600, avatar: '🦁' },
-    { name: 'alamin', xp: 1420, avatar: '🐼' },
-    { name: 'blabla', xp: 1200, avatar: '🦄' },
-    { name: 'Guest', xp: 850, avatar: '👤' }
-  ]);
+  const [leaderboard, setLeaderboard] = useState([]);
   const [userStats, setUserStats] = useState({ xp: 0, level: 1 });
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
 
-  useEffect(() => {
-    const init = async () => {
-      setLoading(true);
-      const name = await AsyncStorage.getItem('userName');
-      const b = await AsyncStorage.getItem('vortex_bookmarks');
-      const l = await AsyncStorage.getItem('vortex_learned');
-      
-      if (name) setUserName(name);
-      if (b) setBookmarks(JSON.parse(b));
-      if (l) setLearned(JSON.parse(l));
+  const initData = async (showLoading = true) => {
+    if (showLoading) setLoading(true);
+    const name = await AsyncStorage.getItem('userName');
+    const b = await AsyncStorage.getItem('vortex_bookmarks');
+    const l = await AsyncStorage.getItem('vortex_learned');
+    
+    if (name) setUserName(name);
+    if (b) setBookmarks(JSON.parse(b));
+    if (l) setLearned(JSON.parse(l));
 
-      await fetchUserData();
-      await fetchLeaderboard();
-      setLoading(false);
-    };
-    init();
+    await Promise.all([fetchUserData(), fetchLeaderboard()]);
+    if (showLoading) setLoading(false);
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      initData(false);
+    }, [])
+  );
+
+  useEffect(() => {
+    initData();
   }, []);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await initData(false);
+    setRefreshing(false);
+  };
+
+  const renderAvatar = (source, size = 18, isMain = false) => {
+    const isUrl = source?.startsWith('http');
+    if (isUrl) {
+      return <Image source={{ uri: source }} style={{ width: isMain ? 70 : 40, height: isMain ? 70 : 40, borderRadius: isMain ? 35 : 20 }} />;
+    }
+    return <Text style={{ fontSize: isMain ? 36 : size }}>{source || '👤'}</Text>
+  };
 
   const fetchUserData = async () => {
     try {
@@ -53,33 +66,22 @@ export default function Lab() {
       const res = await fetch(`${API_BASE}/api/user?email=${email}`);
       const data = await res.json();
       if (res.ok) setUserStats({ xp: data.xp || 0, level: data.level || 1 });
-    } catch (e) { }
+      else console.log("User not found in DB yet, will be created on next XP gain.");
+    } catch (e) { 
+      console.error("Failed to fetch user data:", e);
+    }
   };
 
   const fetchLeaderboard = async () => {
-    const demoLegends = [
-      { name: 'nehal2', xp: 2450, avatar: '🚀' },
-      { name: 'arafat', xp: 2100, avatar: '🦊' },
-      { name: 'user11', xp: 1850, avatar: '🤖' },
-      { name: 'sakib', xp: 1600, avatar: '🦁' },
-      { name: 'alamin', xp: 1420, avatar: '🐼' },
-      { name: 'blabla', xp: 1200, avatar: '🦄' },
-      { name: 'Guest', xp: 850, avatar: '👤' }
-    ];
-
     try {
       const res = await fetch(`${API_BASE}/api/leaderboard`);
       const data = await res.json();
       
-      if (res.ok && Array.isArray(data) && data.length > 0) {
-        const combined = [...data, ...demoLegends].sort((a,b) => b.xp - a.xp).slice(0, 10);
-        setLeaderboard(combined);
-      } else {
-        setLeaderboard(demoLegends);
+      if (res.ok && Array.isArray(data)) {
+        setLeaderboard(data.sort((a,b) => b.xp - a.xp).slice(0, 10));
       }
     } catch (e) { 
-      // If API fails (e.g. server down), force load demo legends
-      setLeaderboard(demoLegends);
+      console.error("Failed to fetch leaderboard:", e);
     }
   };
 
@@ -93,14 +95,24 @@ export default function Lab() {
     
     try {
       const email = user?.email || (await AsyncStorage.getItem('userEmail')) || 'guest@vortex.com';
+      const name = user?.name || (await AsyncStorage.getItem('userName')) || 'Explorer';
+      const currentAvatar = avatar || (await AsyncStorage.getItem('vortex_avatar')) || '🚀';
+
       await fetch(`${API_BASE}/api/user/xp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, xpToAdd: 50 })
+        body: JSON.stringify({ 
+          email, 
+          xpToAdd: 50,
+          name,
+          picture: currentAvatar
+        })
       });
       fetchUserData();
       fetchLeaderboard();
-    } catch (e) { }
+    } catch (e) {
+      console.error("Failed to sync learned word XP:", e);
+    }
   };
 
   const progressPercent = useMemo(() => {
@@ -112,7 +124,13 @@ export default function Lab() {
 
   return (
     <View style={{ flex: 1, backgroundColor: activeTheme.bg }}>
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent} 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={activeTheme.accent} />
+        }
+      >
         <MotiView from={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} style={styles.viewContainer}>
           
           {/* Header */}
@@ -126,8 +144,8 @@ export default function Lab() {
           {/* Profile Card */}
           <View style={[styles.profileCard, { backgroundColor: activeTheme.card, borderColor: activeTheme.border, borderWidth: 1 }]}>
             <View style={styles.profileHeader}>
-              <View style={[styles.avatarMain, { backgroundColor: activeTheme.accent }]}>
-                 <Text style={styles.avatarMainText}>{avatar}</Text>
+              <View style={[styles.avatarMain, { backgroundColor: activeTheme.accent, overflow: 'hidden' }]}>
+                 {renderAvatar(user?.picture || avatar, 36, true)}
               </View>
               <View>
                 <Text style={[styles.name, { color: activeTheme.text }]}>{user?.name || userName || "Explorer"}</Text>
@@ -179,8 +197,8 @@ export default function Lab() {
                 style={[styles.leaderboardItem, { borderBottomColor: 'transparent', marginBottom: 8, backgroundColor: activeTheme.bg, borderRadius: 20, paddingHorizontal: 15, borderWidth: 1, borderColor: activeTheme.border }]}
               >
                 <Text style={[styles.rank, { color: i === 0 ? '#fbbf24' : i === 1 ? '#94a3b8' : i === 2 ? '#cd7f32' : activeTheme.subText }]}>#{i + 1}</Text>
-                <View style={[styles.leaderAvatar, { backgroundColor: activeTheme.card }]}>
-                   <Text style={{ fontSize: 18 }}>{u.avatar || '👤'}</Text>
+                <View style={[styles.leaderAvatar, { backgroundColor: activeTheme.card, overflow: 'hidden' }]}>
+                   {renderAvatar(u.picture || u.avatar)}
                 </View>
                 <Text style={[styles.leaderName, { color: activeTheme.text }]}>{u.name}</Text>
                 <View style={[styles.xpBadgeMini, { backgroundColor: activeTheme.accent }]}>

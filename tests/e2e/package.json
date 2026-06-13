@@ -1,0 +1,25 @@
+{
+  "name": "vocab-vortex-e2e",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "E2E testing for VocabVortex using Selenium and WebdriverIO",
+  "main": "index.js",
+  "scripts": {
+    "test": "wdio run ./wdio.conf.js",
+    "report": "allure generate allure-results --clean && allure open",
+    "allure:generate": "allure generate allure-results --clean",
+    "allure:open": "allure open"
+  },
+  "dependencies": {
+    "@wdio/allure-reporter": "latest",
+    "@wdio/cli": "latest",
+    "@wdio/local-runner": "latest",
+    "@wdio/mocha-framework": "latest",
+    "@wdio/selenium-standalone-service": "latest",
+    "@wdio/spec-reporter": "latest",
+    "allure-commandline": "latest",
+    "chai": "latest",
+    "selenium-standalone": "latest",
+    "webdriverio": "latest"
+  }
+}

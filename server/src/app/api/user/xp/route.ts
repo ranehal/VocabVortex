@@ -16,15 +16,27 @@ export async function POST(req: NextRequest) {
     await dbConnect();
 
     const body = await req.json();
-    const { email, xpToAdd } = body;
+    const { email, xpToAdd, name, picture } = body;
 
     if (!isValidString(email) || typeof xpToAdd !== 'number') {
       return NextResponse.json({ error: 'Invalid email or xpToAdd' }, { status: 400 });
     }
 
-    const user = await User.findOne({ email });
+    let user = await User.findOne({ email });
+    
     if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      // Create a guest user if they don't exist yet
+      user = await User.create({
+        email,
+        name: name || 'Explorer',
+        picture: picture || '👤',
+        xp: 0,
+        level: 1
+      });
+    } else {
+      // Update profile info if provided
+      if (name) user.name = name;
+      if (picture) user.picture = picture;
     }
 
     // Award XP

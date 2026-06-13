@@ -7,9 +7,9 @@ import StarField from '../components/StarField';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { X, Volume2, Lightbulb, Info, Zap, Bookmark } from 'lucide-react-native';
 import * as Speech from 'expo-speech';
+import { BASE_URL } from '../constants';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-const BASE_URL = 'http://localhost:3000';
 
 const themes = {
   amoled: { name: 'Space AMOLED', bg: '#000000', card: '#121212', border: '#1e293b', accent: '#3b82f6', text: '#ffffff', subText: '#94a3b8', isSpace: true },
@@ -55,10 +55,32 @@ export default function RootLayout() {
       if (savedTheme && themes[savedTheme]) setThemeKey(savedTheme);
       
       const savedUser = await AsyncStorage.getItem('vortex_user');
-      if (savedUser) setUser(JSON.parse(savedUser));
+      const email = await AsyncStorage.getItem('userEmail');
+      
+      if (savedUser) {
+        const parsedUser = JSON.parse(savedUser);
+        setUser(parsedUser);
+        
+        // Fetch latest data from server
+        if (email && !email.startsWith('guest_')) {
+          try {
+            const res = await fetch(`${BASE_URL}/api/user?email=${email}`);
+            const data = await res.json();
+            if (res.ok) {
+              setUser(data);
+              if (data.bookmarks) {
+                setBookmarks(data.bookmarks);
+                await AsyncStorage.setItem('vortex_bookmarks', JSON.stringify(data.bookmarks));
+              }
+            }
+          } catch (e) {
+            console.error("Failed to fetch user data on init:", e);
+          }
+        }
+      }
 
       const savedBookmarks = await AsyncStorage.getItem('vortex_bookmarks');
-      if (savedBookmarks) setBookmarks(JSON.parse(savedBookmarks));
+      if (savedBookmarks && bookmarks.length === 0) setBookmarks(JSON.parse(savedBookmarks));
 
       const savedAvatar = await AsyncStorage.getItem('vortex_avatar');
       if (savedAvatar) setAvatarState(savedAvatar);
@@ -102,6 +124,24 @@ export default function RootLayout() {
       const next = [...bookmarks, word];
       setBookmarks(next);
       await AsyncStorage.setItem('vortex_bookmarks', JSON.stringify(next));
+      
+      // Sync to server if user is logged in
+      try {
+        const email = await AsyncStorage.getItem('userEmail');
+        if (email && !email.startsWith('guest_')) {
+          await fetch(`${BASE_URL}/api/user`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+              email, 
+              googleId: user?.googleId || 'synced-user', // Fallback or use real ID
+              bookmarks: next 
+            })
+          });
+        }
+      } catch (e) {
+        console.error("Failed to sync bookmark to server:", e);
+      }
     }
     setSelectedWordData(null);
   };

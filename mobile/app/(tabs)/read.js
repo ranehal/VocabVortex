@@ -5,8 +5,8 @@ import { useApp } from '../_layout';
 import { CheckCircle2, RotateCw } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import LoadingSpinner from '../../components/LoadingSpinner';
+import { BASE_URL } from '../../constants';
 
-const BASE_URL = 'http://localhost:3000';
 const READFLOW_STORE_KEY = 'readflow_mobile_v1';
 
 const parseReadFlowText = (raw) => {

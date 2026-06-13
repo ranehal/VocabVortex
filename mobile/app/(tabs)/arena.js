@@ -1,15 +1,40 @@
-import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, ImageBackground } from 'react-native';
+import { useState, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, ImageBackground, RefreshControl } from 'react-native';
 import { MotiView, AnimatePresence } from 'moti';
 import { useApp } from '../_layout';
 import { Gamepad2, Brain, Trophy, Zap, Target, Star, Flame, Sword } from 'lucide-react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { BASE_URL as API_BASE } from '../../constants';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export default function Arena() {
   const { activeTheme, user } = useApp();
   const router = useRouter();
+  const [userStats, setUserStats] = useState({ xp: 0, level: 1 });
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchUserData = async () => {
+    try {
+      const email = user?.email || (await AsyncStorage.getItem('userEmail')) || 'guest@vortex.com';
+      const res = await fetch(`${API_BASE}/api/user?email=${email}`);
+      const data = await res.json();
+      if (res.ok) setUserStats({ xp: data.xp || 0, level: data.level || 1 });
+    } catch (e) { }
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchUserData();
+    }, [])
+  );
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchUserData();
+    setRefreshing(false);
+  };
 
   const games = [
     {
@@ -46,7 +71,13 @@ export default function Arena() {
 
   return (
     <View style={[styles.container, { backgroundColor: activeTheme.bg }]}>
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent} 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={activeTheme.accent} />
+        }
+      >
         <MotiView from={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} style={styles.viewContainer}>
           
           <View style={styles.header}>
@@ -71,7 +102,7 @@ export default function Arena() {
                    <Text style={[styles.dailyTitle, { color: activeTheme.text }]}>DAILY BOSS</Text>
                    <Text style={[styles.dailyDesc, { color: activeTheme.subText }]}>Beat the 5-minute drill for bonus 500 XP!</Text>
                 </View>
-                <TouchableOpacity style={[styles.dailyBtn, { backgroundColor: activeTheme.accent }]}>
+                <TouchableOpacity onPress={() => router.push('/quiz')} style={[styles.dailyBtn, { backgroundColor: activeTheme.accent }]}>
                    <Text style={styles.dailyBtnText}>BATTLE</Text>
                 </TouchableOpacity>
              </MotiView>

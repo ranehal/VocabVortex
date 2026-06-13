@@ -13,7 +13,7 @@ const UserSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
   name: { type: String },
   picture: { type: String },
-  googleId: { type: String, required: true },
+  googleId: { type: String },
   xp: { type: Number, default: 0 },
   level: { type: Number, default: 1 },
   bookmarks: [{ type: String }],

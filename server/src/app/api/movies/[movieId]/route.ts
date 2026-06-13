@@ -9,6 +9,7 @@ export async function GET(
   try {
     await dbConnect();
     const { movieId } = await params;
+
     const movie = await Movie.findById(movieId);
 
     if (!movie) {

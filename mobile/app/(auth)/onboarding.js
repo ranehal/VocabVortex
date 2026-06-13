@@ -43,16 +43,46 @@ export default function Onboarding() {
 
   const nextStep = () => setStep(s => s + 1);
 
+  const skipSurvey = async () => {
+    const dName = name || 'Voyager';
+    const dAge = age || '20';
+    const dGoal = goal || 'casual';
+    const dLevel = level || 'A2';
+    const dInterests = interests.length > 0 ? interests : ['movies'];
+    const randomAvatar = avatars[Math.floor(Math.random() * avatars.length)];
+    const dAvatar = selectedAvatar || randomAvatar;
+    const guestEmail = `guest_${Math.random().toString(36).substring(7)}@vortex.com`;
+    
+    const demoBookmarks = [
+      "Resilient", "Eloquent", "Ephemeral", "Luminous", "Sovereign", 
+      "Cunning", "Enormous", "Rapid", "Jubilant", "Gloomy",
+      "Meticulous", "Pragmatic", "Ineffable", "Serendipity", "Melancholy"
+    ];
+
+    await AsyncStorage.setItem('userEmail', guestEmail);
+    await AsyncStorage.setItem('userName', dName);
+    await AsyncStorage.setItem('userAge', dAge);
+    await AsyncStorage.setItem('userGoal', dGoal);
+    await AsyncStorage.setItem('userLevel', dLevel);
+    await AsyncStorage.setItem('userInterests', JSON.stringify(dInterests));
+    await AsyncStorage.setItem('vortex_bookmarks', JSON.stringify(demoBookmarks));
+    await setAvatar(dAvatar);
+    
+    router.replace('/home');
+  };
+
   const finish = async () => {
     if (!name || !age) return alert('Please fill in your details!');
     
-    // If guest mode, we already populated some data in index.js, but let's override with survey results
+    const guestEmail = `guest_${Math.random().toString(36).substring(7)}@vortex.com`;
+    
     const demoBookmarks = [
       "Resilient", "Eloquent", "Ephemeral", "Luminous", "Sovereign", 
       "Cunning", "Enormous", "Rapid", "Jubilant", "Gloomy",
       "Meticulous", "Pragmatic", "Ineffable", "Serendipity", "Melancholy"
     ];
     
+    await AsyncStorage.setItem('userEmail', guestEmail);
     await AsyncStorage.setItem('userName', name);
     await AsyncStorage.setItem('userAge', age);
     await AsyncStorage.setItem('userGoal', goal);
@@ -66,6 +96,14 @@ export default function Onboarding() {
 
   return (
     <View style={[styles.container, { backgroundColor: activeTheme.bg }]}>
+      {step > 0 && (
+        <TouchableOpacity 
+          onPress={skipSurvey} 
+          style={styles.skipBtn}
+        >
+          <Text style={[styles.skipBtnText, { color: activeTheme.subText }]}>Skip</Text>
+        </TouchableOpacity>
+      )}
       <AnimatePresence exitBeforeEnter>
         {step === 0 && (
           <MotiView
@@ -261,5 +299,7 @@ const styles = StyleSheet.create({
   progressContainer: { position: 'absolute', bottom: 50, left: 30, right: 30, alignItems: 'center' },
   progressBg: { width: '100%', height: 8, borderRadius: 4, overflow: 'hidden', marginBottom: 10 },
   progressFill: { height: '100%', borderRadius: 4 },
-  progressText: { fontSize: 12, fontWeight: '900', letterSpacing: 1 }
+  progressText: { fontSize: 12, fontWeight: '900', letterSpacing: 1 },
+  skipBtn: { position: 'absolute', top: 50, right: 30, zIndex: 10, padding: 10 },
+  skipBtnText: { fontSize: 16, fontWeight: '700' }
 });

@@ -7,8 +7,7 @@ import { Volume2, Bookmark, RotateCw, ChevronLeft } from 'lucide-react-native';
 import * as Speech from 'expo-speech';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import LoadingSpinner from '../components/LoadingSpinner';
-
-const BASE_URL = "http://localhost:3000";
+import { BASE_URL } from '../constants';
 
 export default function Reading() {
   const { word, level } = useLocalSearchParams();

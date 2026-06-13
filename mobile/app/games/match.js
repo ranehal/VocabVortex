@@ -6,6 +6,7 @@ import { useRouter } from 'expo-router';
 import { X, Check, Award, Sparkles, Zap, Star, Heart } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import LoadingSpinner from '../../components/LoadingSpinner';
+import { BASE_URL } from '../../constants';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -52,14 +53,49 @@ export default function WordMatch() {
     const b = await AsyncStorage.getItem('vortex_bookmarks');
     const bookmarks = b ? JSON.parse(b) : [];
     
-    let selectedWords = bookmarks.length >= 3 ? bookmarks.slice(0, 6) : ["Enormous", "Rapid", "Jubilant", "Cunning", "Gloomy", "Ancient"];
+    // Pick 6 random words from bookmarks or defaults
+    let wordPool = bookmarks.length >= 6 ? bookmarks : [
+      "Resilient", "Eloquent", "Ephemeral", "Luminous", "Sovereign", 
+      "Cunning", "Enormous", "Rapid", "Jubilant", "Gloomy"
+    ];
     
-    const gamePairs = selectedWords.map(word => ({
-      word,
-      match: SYNONYM_MAP[word] || 'Synonym'
-    }));
+    // Shuffle and take 6
+    const shuffled = [...wordPool].sort(() => 0.5 - Math.random()).slice(0, 6);
+    
+    try {
+      // Fetch details for synonyms
+      const res = await fetch(`${BASE_URL}/api/words/details`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ words: shuffled })
+      });
+      const data = await res.json();
+      
+      const gamePairs = data.map(item => {
+        let match = 'Expert';
+        if (item.synonyms && item.synonyms.length > 0 && item.synonyms[0] !== '...') {
+          match = item.synonyms[0];
+        } else if (SYNONYM_MAP[item.word]) {
+          match = SYNONYM_MAP[item.word];
+        } else if (SYNONYM_MAP[item.word.charAt(0).toUpperCase() + item.word.slice(1).toLowerCase()]) {
+          match = SYNONYM_MAP[item.word.charAt(0).toUpperCase() + item.word.slice(1).toLowerCase()];
+        }
+        
+        return {
+          word: item.word,
+          match: match
+        };
+      });
 
-    setPairs(gamePairs);
+      // Filter out any placeholders that might have slipped through
+      setPairs(gamePairs.filter(p => p.match !== '...' && p.word !== '...'));
+    } catch (e) {
+      console.error("Failed to fetch game details:", e);
+      // Basic fallback
+      const fallbackPairs = shuffled.map(w => ({ word: w, match: SYNONYM_MAP[w] || 'Genius' }));
+      setPairs(fallbackPairs);
+    }
+    
     setTimeout(() => setLoading(false), 800);
   };
 
@@ -106,12 +142,22 @@ export default function WordMatch() {
     setIsFinished(true);
     try {
       const email = await AsyncStorage.getItem('userEmail') || 'guest@vortex.com';
-      await fetch(`http://localhost:3000/api/user/xp`, {
+      const name = await AsyncStorage.getItem('userName') || 'Explorer';
+      const avatar = await AsyncStorage.getItem('vortex_avatar') || '🚀';
+
+      await fetch(`${BASE_URL}/api/user/xp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, xpToAdd: finalScore })
+        body: JSON.stringify({ 
+          email, 
+          xpToAdd: finalScore,
+          name,
+          picture: avatar
+        })
       });
-    } catch (e) { }
+    } catch (e) {
+      console.error("Failed to sync match XP:", e);
+    }
   };
 
   if (loading) return <View style={{ flex: 1, backgroundColor: activeTheme.bg }}><LoadingSpinner activeTheme={activeTheme} text="PREPARING ARENA..." /></View>;

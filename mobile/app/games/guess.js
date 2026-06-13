@@ -6,6 +6,7 @@ import { useRouter } from 'expo-router';
 import { X, Award, HelpCircle, Zap, Sparkles, Heart } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import LoadingSpinner from '../../components/LoadingSpinner';
+import { BASE_URL } from '../../constants';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -48,17 +49,50 @@ export default function VortexGuess() {
     const b = await AsyncStorage.getItem('vortex_bookmarks');
     const bookmarks = b ? JSON.parse(b) : [];
     
-    let words = bookmarks.length >= 2 ? bookmarks.slice(0, 5) : ["Resilient", "Eloquent", "Ephemeral", "Luminous", "Sovereign"];
+    // Pick 5 random words from bookmarks or defaults
+    let wordPool = bookmarks.length >= 5 ? bookmarks : [
+      "Resilient", "Eloquent", "Ephemeral", "Luminous", "Sovereign", 
+      "Cunning", "Enormous", "Rapid", "Jubilant", "Gloomy"
+    ];
     
-    const data = words.map(word => {
-      const upper = word.toUpperCase();
-      return {
-        word: upper,
-        clue: WORD_DETAILS[upper] || "Personalized challenge from your Lab!"
-      };
-    });
+    // Shuffle and take 5
+    const shuffled = [...wordPool].sort(() => 0.5 - Math.random()).slice(0, 5);
+    
+    try {
+      // Fetch details for clues
+      const res = await fetch(`${BASE_URL}/api/words/details`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ words: shuffled })
+      });
+      const data = await res.json();
+      
+      const gData = data.map(item => {
+        let clue = 'Expert level challenge!';
+        if (item.bengaliDefinition && item.bengaliDefinition !== 'Explore to reveal!' && item.bengaliDefinition !== '...') {
+          clue = item.bengaliDefinition;
+        } else if (WORD_DETAILS[item.word.toUpperCase()]) {
+          clue = WORD_DETAILS[item.word.toUpperCase()];
+        }
+        
+        return {
+          word: item.word.toUpperCase(),
+          clue: clue
+        };
+      });
 
-    setGameData(data);
+      // Filter out invalid items
+      setGameData(gData.filter(g => g.word !== '...' && g.clue !== '...'));
+    } catch (e) {
+      console.error("Failed to fetch game details:", e);
+      // Basic fallback
+      const fallbackData = shuffled.map(w => ({ 
+        word: w.toUpperCase(), 
+        clue: WORD_DETAILS[w.toUpperCase()] || "Expert level challenge!" 
+      }));
+      setGameData(fallbackData);
+    }
+    
     setTimeout(() => setLoading(false), 1000);
   };
 
@@ -86,12 +120,22 @@ export default function VortexGuess() {
     setIsFinished(true);
     try {
       const email = await AsyncStorage.getItem('userEmail') || 'guest@vortex.com';
-      await fetch(`http://localhost:3000/api/user/xp`, {
+      const name = await AsyncStorage.getItem('userName') || 'Explorer';
+      const avatar = await AsyncStorage.getItem('vortex_avatar') || '🚀';
+
+      await fetch(`${BASE_URL}/api/user/xp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, xpToAdd: finalScore })
+        body: JSON.stringify({ 
+          email, 
+          xpToAdd: finalScore,
+          name,
+          picture: avatar
+        })
       });
-    } catch (e) { }
+    } catch (e) {
+      console.error("Failed to sync guess XP:", e);
+    }
   };
 
   if (loading) return <View style={{ flex: 1, backgroundColor: activeTheme.bg }}><LoadingSpinner activeTheme={activeTheme} text="BREWING PERSONALIZED CLUES..." /></View>;
