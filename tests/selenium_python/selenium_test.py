@@ -193,6 +193,10 @@ class ComprehensiveTest:
             self.safe_alert_accept()
             self.log("Bookmark added via Vortex.")
 
+            # Close the global dictionary modal overlay
+            self.home_page.js_click((By.ID, "close-dict-modal-btn"))
+            time.sleep(1)
+
         # ========================================================
         # 5. Arena Challenges: Word Match Gameplay
         # ========================================================

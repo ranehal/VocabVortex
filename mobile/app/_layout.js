@@ -223,7 +223,7 @@ export default function RootLayout() {
                     </View>
 
                     <View style={styles.modalActions}>
-                      <TouchableOpacity onPress={() => setSelectedWordData(null)} style={[styles.modalBtn, { backgroundColor: activeTheme.accent, elevation: 8 }]}><Zap size={18} color="#fff" /><Text style={styles.modalBtnText}>GOT IT</Text></TouchableOpacity>
+                      <TouchableOpacity onPress={() => setSelectedWordData(null)} style={[styles.modalBtn, { backgroundColor: activeTheme.accent, elevation: 8 }]} nativeID="close-dict-modal-btn"><Zap size={18} color="#fff" /><Text style={styles.modalBtnText}>GOT IT</Text></TouchableOpacity>
                       <TouchableOpacity onPress={() => addBookmark(selectedWordData?.word)} style={[styles.modalBtn, { backgroundColor: activeTheme.bg, borderWidth: 2, borderColor: activeTheme.accent }]}><Bookmark size={18} color={activeTheme.accent} /><Text style={[styles.modalBtnText, { color: activeTheme.text }]}>BOOKMARK</Text></TouchableOpacity>
                     </View>
                   </ScrollView>
