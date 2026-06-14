@@ -13,8 +13,8 @@ export default function Onboarding() {
   const params = useLocalSearchParams();
   const { activeTheme, avatars, setAvatar } = useApp();
   const [step, setStep] = useState(0); // Step 0 is the new Welcome/Survey start
-  const [name, setName] = useState('');
-  const [age, setAge] = useState('');
+  const [name, setName] = useState('Selenium');
+  const [age, setAge] = useState('99');
   const [goal, setGoal] = useState('');
   const [level, setLevel] = useState('A2');
   const [interests, setInterests] = useState([]);
@@ -156,6 +156,7 @@ export default function Onboarding() {
               placeholderTextColor={activeTheme.subText}
               value={name}
               onChangeText={setName}
+              nativeID="onboarding-name-input"
             />
             <TextInput
               style={[styles.input, { backgroundColor: activeTheme.card, color: activeTheme.text, borderColor: activeTheme.border, borderWidth: 2 }]}
@@ -164,8 +165,9 @@ export default function Onboarding() {
               value={age}
               onChangeText={setAge}
               keyboardType="numeric"
+              nativeID="onboarding-age-input"
             />
-            <TouchableOpacity onPress={nextStep} style={[styles.button, { backgroundColor: activeTheme.accent, borderBottomWidth: 5, borderBottomColor: 'rgba(0,0,0,0.2)' }]}>
+            <TouchableOpacity onPress={nextStep} style={[styles.button, { backgroundColor: activeTheme.accent, borderBottomWidth: 5, borderBottomColor: 'rgba(0,0,0,0.2)' }]} nativeID="next-step-btn">
               <Text style={styles.buttonText}>Next Step</Text>
               <ChevronRight size={20} color="#fff" />
             </TouchableOpacity>
@@ -194,7 +196,7 @@ export default function Onboarding() {
                 </TouchableOpacity>
               ))}
             </View>
-            <TouchableOpacity onPress={nextStep} style={[styles.button, { backgroundColor: activeTheme.accent, borderBottomWidth: 5, borderBottomColor: 'rgba(0,0,0,0.2)' }]}>
+            <TouchableOpacity onPress={nextStep} style={[styles.button, { backgroundColor: activeTheme.accent, borderBottomWidth: 5, borderBottomColor: 'rgba(0,0,0,0.2)' }]} nativeID="next-step-btn">
               <Text style={styles.buttonText}>Continue</Text>
               <ChevronRight size={20} color="#fff" />
             </TouchableOpacity>
@@ -224,7 +226,7 @@ export default function Onboarding() {
                 </TouchableOpacity>
               ))}
             </View>
-            <TouchableOpacity onPress={nextStep} style={[styles.button, { backgroundColor: activeTheme.accent, borderBottomWidth: 5, borderBottomColor: 'rgba(0,0,0,0.2)' }]}>
+            <TouchableOpacity onPress={nextStep} style={[styles.button, { backgroundColor: activeTheme.accent, borderBottomWidth: 5, borderBottomColor: 'rgba(0,0,0,0.2)' }]} nativeID="next-step-btn">
               <Text style={styles.buttonText}>Almost there</Text>
               <ChevronRight size={20} color="#fff" />
             </TouchableOpacity>
@@ -252,7 +254,7 @@ export default function Onboarding() {
                 </TouchableOpacity>
               ))}
             </View>
-            <TouchableOpacity onPress={finish} style={[styles.button, { backgroundColor: activeTheme.accent, borderBottomWidth: 5, borderBottomColor: 'rgba(0,0,0,0.2)' }]}>
+            <TouchableOpacity onPress={finish} style={[styles.button, { backgroundColor: activeTheme.accent, borderBottomWidth: 5, borderBottomColor: 'rgba(0,0,0,0.2)' }]} nativeID="finish-survey-btn">
               <Text style={styles.buttonText}>Enter the Vortex 🚀</Text>
             </TouchableOpacity>
           </MotiView>

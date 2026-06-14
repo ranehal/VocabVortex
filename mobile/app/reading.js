@@ -78,7 +78,7 @@ export default function Reading() {
             <View style={styles.dictTop}>
               <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                 <Text style={[styles.dictWord, { color: activeTheme.text }]}>{currentStory?.word}</Text>
-                <TouchableOpacity onPress={() => speak(currentStory?.word)} style={styles.speakerBtn}>
+                <TouchableOpacity onPress={() => speak(currentStory?.word)} style={styles.speakerBtn} nativeID="tts-btn">
                   <Volume2 size={24} color={activeTheme.accent} />
                 </TouchableOpacity>
               </View>

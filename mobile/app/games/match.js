@@ -178,7 +178,7 @@ export default function WordMatch() {
                <Heart key={i} size={24} color={i < lives ? "#ef4444" : "#333"} fill={i < lives ? "#ef4444" : "transparent"} />
              ))}
           </View>
-          <TouchableOpacity onPress={() => router.back()} style={[styles.btn, { backgroundColor: activeTheme.accent }]}>
+          <TouchableOpacity onPress={() => router.back()} style={[styles.btn, { backgroundColor: activeTheme.accent }]} nativeID="match-continue-btn">
             <Text style={styles.btnText}>CONTINUE</Text>
           </TouchableOpacity>
         </MotiView>
@@ -240,6 +240,7 @@ export default function WordMatch() {
                     isSelected && { borderColor: activeTheme.accent, backgroundColor: activeTheme.bg },
                     isError && { borderColor: '#ef4444' }
                   ]}
+                  nativeID={`match-left-${word}`}
                 >
                   <Text style={[styles.wordText, { color: activeTheme.text }]}>{word}</Text>
                 </TouchableOpacity>
@@ -273,6 +274,7 @@ export default function WordMatch() {
                     isSelected && { borderColor: activeTheme.accent, backgroundColor: activeTheme.bg },
                     isError && { borderColor: '#ef4444' }
                   ]}
+                  nativeID={`match-right-${match}`}
                 >
                   <Text style={[styles.wordText, { color: activeTheme.text }]}>{match}</Text>
                 </TouchableOpacity>

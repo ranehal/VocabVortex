@@ -117,6 +117,7 @@ export default function Arena() {
                 onPress={() => router.push(game.route)}
                 activeOpacity={0.9}
                 style={[styles.gameCard, { backgroundColor: game.color }]}
+                nativeID={`game-card-${game.id}`}
               >
                 <MotiView
                   from={{ scale: 0.9, opacity: 0 }}

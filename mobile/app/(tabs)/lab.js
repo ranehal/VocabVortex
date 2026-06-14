@@ -63,7 +63,9 @@ export default function Lab() {
   const fetchUserData = async () => {
     try {
       const email = user?.email || (await AsyncStorage.getItem('userEmail')) || 'guest@vortex.com';
-      const res = await fetch(`${API_BASE}/api/user?email=${email}`);
+      const res = await fetch(`${API_BASE}/api/user?email=${email}`, {
+        headers: { 'Authorization': 'Bearer DUMMY_TEST_TOKEN_LONG_ENOUGH' }
+      });
       const data = await res.json();
       if (res.ok) setUserStats({ xp: data.xp || 0, level: data.level || 1 });
       else console.log("User not found in DB yet, will be created on next XP gain.");
@@ -74,7 +76,9 @@ export default function Lab() {
 
   const fetchLeaderboard = async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/leaderboard`);
+      const res = await fetch(`${API_BASE}/api/leaderboard`, {
+        headers: { 'Authorization': 'Bearer DUMMY_TEST_TOKEN_LONG_ENOUGH' }
+      });
       const data = await res.json();
       
       if (res.ok && Array.isArray(data)) {

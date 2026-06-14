@@ -315,8 +315,8 @@ export default function Movies() {
           <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
             {movieSuggestions.length > 0 && searchQuery.length > 0 && (
               <View style={[styles.suggestions, { backgroundColor: activeTheme.card, borderColor: activeTheme.border }]}>
-                {movieSuggestions.slice(0, 5).map(m => (
-                  <TouchableOpacity key={m._id || m.imdbId} onPress={() => selectSuggestion(m)} style={[styles.suggestionItem, { borderBottomColor: activeTheme.border }]}>
+                {movieSuggestions.slice(0, 5).map((m, i) => (
+                  <TouchableOpacity key={m._id || m.imdbId} onPress={() => selectSuggestion(m)} style={[styles.suggestionItem, { borderBottomColor: activeTheme.border }]} nativeID={`movie-suggestion-${i}`}>
                     <Text style={{ fontSize: 24 }}>{m.posterEmoji}</Text>
                     <View><Text style={{ color: activeTheme.text, fontWeight: 'bold' }}>{m.title}</Text><Text style={{ color: activeTheme.subText, fontSize: 12 }}>{m.year}</Text></View>
                   </TouchableOpacity>
@@ -390,7 +390,7 @@ export default function Movies() {
                         <Text style={{ color: activeTheme.text, fontWeight: 'bold', fontSize: 24 }}>:</Text>
                         <WheelPicker range={60} value={jumpS} onChange={setJumpS} activeTheme={activeTheme} />
                     </View>
-                    <TouchableOpacity onPress={handleJump} style={[styles.jumpBtn, { backgroundColor: activeTheme.accent }]}><Text style={styles.jumpBtnText}>JUMP</Text></TouchableOpacity>
+                    <TouchableOpacity onPress={handleJump} style={[styles.jumpBtn, { backgroundColor: activeTheme.accent }]} nativeID="jump-btn"><Text style={styles.jumpBtnText}>JUMP</Text></TouchableOpacity>
                     </View>
                 </View>
             )}
@@ -404,7 +404,34 @@ export default function Movies() {
             ref={flatListRef}
             data={filteredDialogues}
             keyExtractor={(item, index) => index.toString()}
-            renderItem={renderItem}
+            renderItem={({ item: d, index: i }) => {
+              const realIndex = dialogues.indexOf(d);
+              const isHighlighted = (highlightedIndex === i) || (currentDialogue === d);
+              return (
+                <TouchableOpacity 
+                  activeOpacity={0.8} 
+                  onPress={() => {
+                      if (localVideoUri && videoRef.current) {
+                          videoRef.current.setPositionAsync((d.startTime || 0) * 1000);
+                      } else if (!d.bn) {
+                          translateLine(realIndex, d.en);
+                      }
+                  }} 
+                  style={[styles.itemCard, { backgroundColor: isHighlighted ? activeTheme.accent : activeTheme.card, borderColor: activeTheme.border }]}
+                  nativeID={`sub-line-${i}`}
+                >
+                  <View style={styles.itemHeader}>
+                    <Text style={{ color: isHighlighted ? '#fff' : activeTheme.accent, fontWeight: 'bold', fontSize: 11 }}>{d.speaker?.toUpperCase() || ''}</Text>
+                    <Text style={{ color: isHighlighted ? '#fff' : activeTheme.subText, fontSize: 10 }}>{d.timestamp}</Text>
+                  </View>
+                  <View>
+                    {renderDialogueText(d.en)}
+                  </View>
+                  {d.bn && <Text style={{ color: isHighlighted ? '#fff' : activeTheme.accent, marginTop: 8, fontSize: 14, fontWeight: '600', borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)', paddingTop: 10 }}>{d.bn}</Text>}
+                  {translatingLine === realIndex && <ActivityIndicator size="small" color={isHighlighted ? '#fff' : activeTheme.accent} style={styles.loaderIcon} />}
+                </TouchableOpacity>
+              );
+            }}
             showsVerticalScrollIndicator={true}
             contentContainerStyle={{ paddingBottom: 150, paddingHorizontal: 24 }}
             onScrollToIndexFailed={info => {

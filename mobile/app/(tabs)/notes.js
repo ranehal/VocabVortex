@@ -186,7 +186,7 @@ export default function Notes() {
           <Text style={[styles.listTitle, { color: activeTheme.text }]}>My <Text style={{ color: activeTheme.accent }}>Notes</Text></Text>
           <View style={{ flexDirection: 'row', gap: 10 }}>
             {isSyncing && <ActivityIndicator size="small" color={activeTheme.accent} />}
-            <TouchableOpacity onPress={createNewNote} style={[styles.addBtn, { backgroundColor: activeTheme.accent }]}>
+            <TouchableOpacity onPress={createNewNote} style={[styles.addBtn, { backgroundColor: activeTheme.accent }]} nativeID="add-note-btn">
               <Plus size={24} color="#fff" />
             </TouchableOpacity>
           </View>
@@ -199,7 +199,7 @@ export default function Notes() {
             </View>
           ) : notes.map((n, i) => (
             <MotiView key={n._id || i} from={{ opacity: 0, translateY: 20 }} animate={{ opacity: 1, translateY: 0 }} transition={{ delay: i * 50 }}>
-              <TouchableOpacity onPress={() => openNote(n)} style={[styles.noteCard, { backgroundColor: activeTheme.card, borderColor: activeTheme.border }]}>
+              <TouchableOpacity onPress={() => openNote(n)} style={[styles.noteCard, { backgroundColor: activeTheme.card, borderColor: activeTheme.border }]} nativeID={`note-card-${i}`}>
                 <Text style={[styles.noteCardTitle, { color: activeTheme.text }]} numberOfLines={1}>{n.title || 'Untitled Document'}</Text>
                 <Text style={[styles.noteCardPreview, { color: activeTheme.subText }]} numberOfLines={2}>{n.content || 'No content yet...'}</Text>
                 <View style={styles.noteCardFooter}>
@@ -218,8 +218,8 @@ export default function Notes() {
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1, backgroundColor: activeTheme.bg }}>
       <View style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => setView('list')} style={styles.backBtn}><ChevronLeft size={28} color={activeTheme.text} /></TouchableOpacity>
-          <TextInput style={[styles.titleInput, { color: activeTheme.text }]} value={currentNote.title} onChangeText={handleTitleChange} placeholder="Untitled Document" placeholderTextColor={activeTheme.subText} />
+          <TouchableOpacity onPress={() => setView('list')} style={styles.backBtn} nativeID="note-back-btn"><ChevronLeft size={28} color={activeTheme.text} /></TouchableOpacity>
+          <TextInput style={[styles.titleInput, { color: activeTheme.text }]} value={currentNote.title} onChangeText={handleTitleChange} placeholder="Untitled Document" placeholderTextColor={activeTheme.subText} nativeID="note-title-input" />
           <View style={styles.statusContainer}>{isSaving ? <ActivityIndicator size="small" color={activeTheme.accent} /> : <Check size={16} color={activeTheme.subText} />}</View>
         </View>
         <View style={styles.toolbar}>
@@ -227,13 +227,13 @@ export default function Notes() {
             <View style={styles.toolItem}><AlignLeft size={12} color={activeTheme.subText} /><Text style={[styles.toolText, { color: activeTheme.subText }]}>{stats.words} Words</Text></View>
             <View style={styles.toolItem}><Clock size={12} color={activeTheme.subText} /><Text style={[styles.toolText, { color: activeTheme.subText }]}>{stats.readingTime}m Read</Text></View>
         </View>
-        <View style={[styles.editorContainer, { backgroundColor: activeTheme.card, borderColor: activeTheme.border }]}><TextInput style={[styles.input, { color: activeTheme.text }]} multiline placeholder="Start writing your thoughts..." placeholderTextColor={activeTheme.subText} value={currentNote.content} onChangeText={handleContentChange} textAlignVertical="top" /></View>
+        <View style={[styles.editorContainer, { backgroundColor: activeTheme.card, borderColor: activeTheme.border }]}><TextInput style={[styles.input, { color: activeTheme.text }]} multiline placeholder="Start writing your thoughts..." placeholderTextColor={activeTheme.subText} value={currentNote.content} onChangeText={handleContentChange} textAlignVertical="top" nativeID="note-content-input" /></View>
         <View style={styles.fabContainer}>
           <AnimatePresence>
             {showAiMenu && (
               <MotiView from={{ opacity: 0, scale: 0.5, translateY: 20 }} animate={{ opacity: 1, scale: 1, translateY: 0 }} exit={{ opacity: 0, scale: 0.5, translateY: 20 }} style={[styles.aiMenu, { backgroundColor: activeTheme.card, borderColor: activeTheme.accent }]}>
                 {aiOptions.map((opt) => (
-                  <TouchableOpacity key={opt.id} onPress={() => handleAiActionInternal(opt.id)} style={[styles.aiOption, { borderBottomColor: activeTheme.border }]}>
+                  <TouchableOpacity key={opt.id} onPress={() => handleAiActionInternal(opt.id)} style={[styles.aiOption, { borderBottomColor: activeTheme.border }]} nativeID={`ai-option-${opt.id}`}>
                     <View style={[styles.optIcon, { backgroundColor: opt.color }]}>{opt.icon}</View>
                     <Text style={[styles.optLabel, { color: activeTheme.text }]}>{opt.label}</Text>
                   </TouchableOpacity>
@@ -241,7 +241,7 @@ export default function Notes() {
               </MotiView>
             )}
           </AnimatePresence>
-          <TouchableOpacity onPress={() => setShowAiMenu(!showAiMenu)} disabled={isProcessing} style={[styles.fab, { backgroundColor: activeTheme.accent }]}>{isProcessing ? <ActivityIndicator color="#fff" /> : <Sparkles color="#fff" size={28} />}</TouchableOpacity>
+          <TouchableOpacity onPress={() => setShowAiMenu(!showAiMenu)} disabled={isProcessing} style={[styles.fab, { backgroundColor: activeTheme.accent }]} nativeID="ai-menu-btn">{isProcessing ? <ActivityIndicator color="#fff" /> : <Sparkles color="#fff" size={28} />}</TouchableOpacity>
         </View>
         <View style={styles.footerActions}>
             <TouchableOpacity onPress={() => deleteNote(currentNote._id)} style={[styles.actionBtn, { borderColor: '#ef444422' }]}><Trash2 size={18} color="#ef4444" /><Text style={[styles.actionBtnText, { color: '#ef4444' }]}>Delete</Text></TouchableOpacity>
