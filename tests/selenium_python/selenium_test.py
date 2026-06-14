@@ -54,7 +54,7 @@ class ComprehensiveTest:
             start_btn = (By.ID, "start-journey-btn")
             if self.home_page.is_displayed(start_btn):
                 self.home_page.js_click(start_btn)
-                time.sleep(1.5)
+                time.sleep(2)
             
             # Fill the name and age inputs
             try:
@@ -63,17 +63,17 @@ class ComprehensiveTest:
                 if self.home_page.is_displayed(name_input):
                     self.home_page.send_keys(name_input, "Selenium Bot")
                     self.home_page.send_keys(age_input, "99")
-                    time.sleep(0.5)
+                    time.sleep(1)
             except:
                 pass
                 
-            # Then click next step to proceed
+            # Then click next step to proceed (exactly 3 times for steps 1, 2, 3)
             next_btn = (By.ID, "next-step-btn")
-            for step in range(4):
+            for step in range(3):
                 try:
-                    self.log(f"Attempting to click next step {step}...")
+                    self.log(f"Attempting to click next step {step + 1}...")
                     self.home_page.js_click(next_btn)
-                    time.sleep(1.5)
+                    time.sleep(2)  # Wait longer for transitions
                 except Exception as ex:
                     self.log(f"Failed to click next step {step}: {ex}")
                     break
@@ -83,9 +83,10 @@ class ComprehensiveTest:
                 self.log("Attempting to click finish...")
                 self.home_page.js_click(finish_btn)
                 self.log("Clicked finish survey.")
-                time.sleep(1)
+                time.sleep(2)
                 self.safe_alert_accept()
-                time.sleep(3)
+                self.log("Waiting for overlay to clear and route to /home...")
+                time.sleep(10) # longer wait for routing and heavy Moti overlay to finish
             except Exception as ex:
                 self.log(f"Failed to click finish: {ex}")
                 pass
@@ -97,7 +98,7 @@ class ComprehensiveTest:
         # ========================================================
         self.log("Step 2: Journey - Cinematic Vortex (Deep Interaction)")
         self.home_page.js_click((By.CSS_SELECTOR, '[aria-label="nav-movies-btn"]'))
-        time.sleep(1.5)
+        time.sleep(2)
         assert self.home_page.is_displayed((By.ID, "movies-pane"))
         
         search_input = (By.ID, "movie-search-input")
@@ -109,7 +110,7 @@ class ComprehensiveTest:
         if self.home_page.is_displayed(first_suggestion):
             self.home_page.js_click(first_suggestion)
             self.log("Selected first movie suggestion.")
-            time.sleep(2)
+            time.sleep(3)
             
             # Jump time
             jump_btn = (By.ID, "jump-btn")
@@ -117,7 +118,7 @@ class ComprehensiveTest:
                 self.home_page.js_click(jump_btn)
                 self.safe_alert_accept()
                 self.log("Jumped to a random time.")
-                time.sleep(1)
+                time.sleep(1.5)
             
             # Tap subtitle
             first_subtitle = (By.ID, "sub-line-0")
@@ -148,8 +149,8 @@ class ComprehensiveTest:
         self.home_page.js_click((By.ID, "ai-menu-btn"))
         time.sleep(1)
         self.home_page.js_click((By.ID, "ai-option-fix"))
-        self.log("Triggered AI grammar fix on note.")
-        time.sleep(3) # Wait for AI processing
+        self.log("Triggered AI grammar fix on note. Waiting 10 seconds...")
+        time.sleep(10) # Much longer wait for AI processing
         
         # Go back to notes list
         self.home_page.js_click((By.ID, "note-back-btn"))
@@ -206,19 +207,19 @@ class ComprehensiveTest:
             self.log("Entered Word Match game.")
             time.sleep(2)
             
-            # Just click one left word and one right word to verify interactability
-            left_word = (By.CSS_SELECTOR, '[id^="match-left-"]')
-            right_word = (By.CSS_SELECTOR, '[id^="match-right-"]')
+            # Play 3 rounds instead of 1
+            left_words = self.driver.find_elements(By.CSS_SELECTOR, '[id^="match-left-"]')
+            right_words = self.driver.find_elements(By.CSS_SELECTOR, '[id^="match-right-"]')
             
-            if self.home_page.is_displayed(left_word) and self.home_page.is_displayed(right_word):
-                self.home_page.js_click(left_word)
+            rounds = min(3, len(left_words), len(right_words))
+            for i in range(rounds):
+                self.driver.execute_script("arguments[0].click();", left_words[i])
                 time.sleep(0.5)
-                self.home_page.js_click(right_word)
-                self.log("Played a round in Word Match.")
+                self.driver.execute_script("arguments[0].click();", right_words[i])
+                self.log(f"Played round {i+1} in Word Match.")
                 time.sleep(1)
             
-            # Return from game (either back button or close)
-            # We can navigate via tabs
+            # Return from game
             self.home_page.js_click((By.CSS_SELECTOR, '[aria-label="nav-arena-btn"]'))
             time.sleep(1)
 
