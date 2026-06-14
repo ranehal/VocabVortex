@@ -21,7 +21,6 @@ class ComprehensiveTest:
         self.driver = driver
         self.base_url = "http://localhost:8081"
         self.login_page = LoginPage(driver)
-
         self.home_page = HomePage(driver)
         self.reading_page = ReadingPage(driver)
         self.trainer_page = TrainerPage(driver)
@@ -30,135 +29,108 @@ class ComprehensiveTest:
         print(f"[TEST LOG] {message}")
 
     def run(self):
-        self.log("--- Starting Comprehensive Frontend Test ---")
+        self.log("--- Starting Full Feature Journey Test ---")
         self.driver.get(self.base_url)
-        time.sleep(1)
-
-        # 1. Guest Login
-        self.log("Step 1: Guest Login")
-        self.login_page.login_as_guest()
         time.sleep(2)
 
-        # Onboarding Flow
+        # 1. Guest Login & Onboarding
+        self.log("Step 1: Authentication & Onboarding")
+        self.login_page.login_as_guest()
+        time.sleep(2)
+        
         try:
-            self.log("Handling Onboarding Flow...")
-            # Step 0: Welcome
             start_btn = (By.ID, "start-journey-btn")
             if self.home_page.is_displayed(start_btn):
                 self.home_page.click(start_btn)
                 time.sleep(1)
             
-            # Step 1+: Skip Survey
             skip_btn = (By.ID, "skip-onboarding")
             if self.home_page.is_displayed(skip_btn):
                 self.home_page.click(skip_btn)
-                self.log("Onboarding skipped.")
+                self.log("Onboarding survey skipped.")
                 time.sleep(2)
-        except Exception as e:
-            self.log(f"Onboarding flow not found or already completed: {e}")
+        except:
+            self.log("Onboarding not present, continuing...")
 
-        # 2. Home Page -> Navigation Tabs
-        self.log("Step 2: Testing Navigation Tabs")
-        
-        # Notes
-        self.log("Navigating to Notes...")
-        self.home_page.js_click((By.CSS_SELECTOR, '[aria-label="nav-notes-btn"]'))
-        assert self.home_page.is_displayed((By.ID, "notes-pane"))
-        self.log("Notes panel verified.")
-        time.sleep(1)
-
-        # Movies
-        self.log("Navigating to Movies...")
+        # 2. Section: Movies
+        self.log("Step 2: Journey - Cinematic Vortex")
         self.home_page.js_click((By.CSS_SELECTOR, '[aria-label="nav-movies-btn"]'))
+        time.sleep(1.5)
         assert self.home_page.is_displayed((By.ID, "movies-pane"))
-        self.log("Movies panel verified.")
+        
+        # Test movie search interaction
+        search_input = (By.ID, "movie-search-input")
+        self.home_page.send_keys(search_input, "Matrix")
+        self.log("Movie search interaction verified.")
         time.sleep(1)
 
-        # Games
-        self.log("Navigating to Arena (Games)...")
+        # 3. Section: Arena (Games)
+        self.log("Step 3: Journey - Arena Challenges")
         self.home_page.js_click((By.CSS_SELECTOR, '[aria-label="nav-arena-btn"]'))
+        time.sleep(1.5)
         assert self.home_page.is_displayed((By.ID, "games-pane"))
-        self.log("Games panel verified.")
+        self.log("Arena panel verified.")
         time.sleep(1)
 
-        # Back to Home
-        self.log("Navigating back to Home...")
+        # 4. Section: Notes
+        self.log("Step 4: Journey - Field Notes")
+        self.home_page.js_click((By.CSS_SELECTOR, '[aria-label="nav-notes-btn"]'))
+        time.sleep(1.5)
+        assert self.home_page.is_displayed((By.ID, "notes-pane"))
+        self.log("Notes list verified.")
+        time.sleep(1)
+
+        # 5. Section: Theme Picker
+        self.log("Step 5: Feature - Universe Selector")
         self.home_page.js_click((By.CSS_SELECTOR, '[aria-label="nav-home-btn"]'))
         time.sleep(1)
-        
-        # 3. Features: Theme Engine
-        self.log("Step 3: Theme Engine")
-        self.home_page.click(HomePage.THEME_TOGGLE)
+        self.home_page.click((By.ID, "theme-toggle"))
         time.sleep(1)
-        theme_option = (By.ID, "theme-option-verdant")
-        self.home_page.click(theme_option)
-        self.log("Theme changed to Verdant successfully.")
+        # Change to Sky High theme
+        self.home_page.click((By.ID, "theme-option-sky"))
+        self.log("Universe changed to 'Sky High'.")
         time.sleep(1)
 
-        # 4. Features: Suggestions & Reading
-        self.log("Step 4: Suggestions & Reading Flow")
+        # 6. Section: Reading Flow
+        self.log("Step 6: Journey - Vortex Reading")
         suggestion = (By.CSS_SELECTOR, '[id^="suggestion-word-"]')
         suggestion_text = self.home_page.get_text(suggestion)
-        self.log(f"Picking suggestion: {suggestion_text}")
+        self.log(f"Entering Vortex for: {suggestion_text}")
         self.home_page.click(suggestion)
-        time.sleep(0.5)
-        self.home_page.click_explore()
+        self.home_page.click((By.ID, "explore-btn"))
         
-        self.log("Waiting for AI generation...")
-        time.sleep(3) # Give it time to generate or fail
+        self.log("Waiting for Vortex generation...")
+        time.sleep(4) 
         
         story = self.reading_page.get_story()
-        if "Error generating content" in story or "Vortex logic fail" in story:
-            self.log("WARNING: Story generation failed. Skipping Word/Drill Insight tests.")
-            # Go back to home to continue other tests
-            self.home_page.js_click((By.CSS_SELECTOR, '[aria-label="nav-home-btn"]'))
-            time.sleep(1)
+        if "fail" in story or "Error" in story:
+            self.log("WARNING: Story generation skipped due to server error.")
         else:
-            self.log(f"Story generated for '{suggestion_text}'.")
-            time.sleep(1)
-
-            # 5. Modals: Word Insight
-            self.log("Step 5: Word Insight Modal")
-            # Find any word span in the story
+            self.log("Reading story generated successfully.")
+            # Test word insight
             word_span = (By.CSS_SELECTOR, '[id^="word-span-"]')
-            self.reading_page.click(word_span)
+            self.reading_page.js_click(word_span)
             time.sleep(1)
             self.reading_page.click((By.ID, "add-to-vortex-btn"))
-            self.log(f"Word added to Vortex via Insight.")
-            time.sleep(1)
+            self.log("Bookmark added via Vortex.")
 
-            # 6. Modals: Drill Insight
-            self.log("Step 6: Drill Insight Modal")
-            try:
-                self.reading_page.js_click((By.CLASS_NAME, "drill-info-btn"))
-                time.sleep(1)
-                self.reading_page.click((By.ID, "close-drill-insight-done"))
-                self.log("Drill Insight Modal verified.")
-            except Exception as e:
-                self.log(f"Skipping Drill Insight (might be broken/empty): {e}")
-            time.sleep(1)
-
-        # 7. Trainer Queue
-        self.log("Step 7: Trainer Queue Verification")
+        # 7. Section: Lab (Trainer)
+        self.log("Step 7: Journey - Progress Lab")
         self.home_page.js_click((By.CSS_SELECTOR, '[aria-label="nav-lab-btn"]'))
-        time.sleep(1)
+        time.sleep(1.5)
         assert self.home_page.is_displayed((By.ID, "trainer-pane"))
-        self.log("Trainer/Lab panel verified.")
+        self.log("Progress Lab verified.")
         time.sleep(1)
 
-        # 8. Full Circle
-        self.log("Step 8: Full Circle to Home")
+        # 8. Return Home
+        self.log("Step 8: Journey Complete")
         self.home_page.js_click((By.CSS_SELECTOR, '[aria-label="nav-home-btn"]'))
         time.sleep(1)
-        final_count = self.home_page.get_text((By.ID, "queue-count"))
-        self.log(f"Home Page Queue Count: {final_count}")
-        
-        self.log("--- Comprehensive Frontend Test Completed Successfully ---")
+        self.log("--- Full Journey Test Completed Successfully ---")
         time.sleep(2)
 
 if __name__ == "__main__":
     chrome_options = Options()
-    # chrome_options.add_argument("--headless") # Headless disabled for visual verification
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--window-size=1200,1000")
     

@@ -2,191 +2,81 @@ import { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, ImageBackground, RefreshControl } from 'react-native';
 import { MotiView, AnimatePresence } from 'moti';
 import { useApp } from '../_layout';
-import { Gamepad2, Brain, Trophy, Zap, Target, Star, Flame, Sword } from 'lucide-react-native';
-import { useRouter, useFocusEffect } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { BASE_URL as API_BASE } from '../../constants';
+import { Target, Zap, Layout, Trophy, ChevronRight, Play } from 'lucide-react-native';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export default function Arena() {
-  const { activeTheme, user } = useApp();
-  const router = useRouter();
-  const [userStats, setUserStats] = useState({ xp: 0, level: 1 });
-  const [refreshing, setRefreshing] = useState(false);
-
-  const fetchUserData = async () => {
-    try {
-      const email = user?.email || (await AsyncStorage.getItem('userEmail')) || 'guest@vortex.com';
-      const res = await fetch(`${API_BASE}/api/user?email=${email}`);
-      const data = await res.json();
-      if (res.ok) setUserStats({ xp: data.xp || 0, level: data.level || 1 });
-    } catch (e) { }
-  };
-
-  useFocusEffect(
-    useCallback(() => {
-      fetchUserData();
-    }, [])
-  );
-
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await fetchUserData();
-    setRefreshing(false);
-  };
-
+  const { activeTheme } = useApp();
+  
   const games = [
-    {
-      id: 'match',
-      title: 'Word Match',
-      desc: 'Connect synonyms at high speed',
-      icon: <Target size={34} color="#fff" />,
-      color: '#10b981',
-      xp: '+100 XP',
-      route: '/games/match',
-      tags: ['POPULAR', 'SPEED']
-    },
-    {
-      id: 'guess',
-      title: 'Vortex Guess',
-      desc: 'Crack the code from clues',
-      icon: <Brain size={34} color="#fff" />,
-      color: '#3b82f6',
-      xp: '+150 XP',
-      route: '/games/guess',
-      tags: ['SMART']
-    },
-    {
-      id: 'speed',
-      title: 'Arena Quiz',
-      desc: 'Ultimate vocabulary showdown',
-      icon: <Sword size={34} color="#fff" />,
-      color: '#ef4444',
-      xp: '+200 XP',
-      route: '/quiz',
-      tags: ['ELITE']
-    }
+    { id: 'guess', title: 'Vortex Guess', icon: <Zap size={32} color="#fbbf24" />, desc: 'Predict the meaning from context' },
+    { id: 'match', title: 'Semantic Match', icon: <Layout size={32} color="#3b82f6" />, desc: 'Connect synonyms in the void' },
   ];
 
   return (
     <View style={[styles.container, { backgroundColor: activeTheme.bg }]} nativeID="games-pane">
-      <ScrollView 
-        contentContainerStyle={styles.scrollContent} 
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={activeTheme.accent} />
-        }
-      >
-        <MotiView from={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} style={styles.viewContainer}>
-          
-          <View style={styles.header}>
-            <View>
-              <Text style={[styles.title, { color: activeTheme.text }]}>THE <Text style={{ color: activeTheme.accent }}>ARENA</Text></Text>
-              <Text style={[styles.subtitle, { color: activeTheme.subText }]}>Master words, earn XP, rule the world</Text>
-            </View>
-            <MotiView animate={{ scale: [1, 1.1, 1] }} transition={{ loop: true, duration: 2000 }} style={styles.streakBadge}>
-               <Flame size={20} color="#f97316" fill="#f97316" />
-               <Text style={styles.streakText}>5</Text>
-            </MotiView>
-          </View>
+      <View style={styles.header}>
+        <Text style={[styles.title, { color: activeTheme.text }]}>The <Text style={{ color: activeTheme.accent }}>Arena</Text></Text>
+        <Text style={[styles.subtitle, { color: activeTheme.subText }]}>Test your mastery in the void.</Text>
+      </View>
 
-          <View style={styles.dailyChallenge}>
-             <MotiView 
-               from={{ scale: 0.9, opacity: 0 }} 
-               animate={{ scale: 1, opacity: 1 }}
-               style={[styles.dailyCard, { backgroundColor: activeTheme.card, borderColor: activeTheme.accent }]}
-             >
-                <View style={styles.dailyInfo}>
-                   <Trophy size={32} color="#fbbf24" style={{ marginBottom: 10 }} />
-                   <Text style={[styles.dailyTitle, { color: activeTheme.text }]}>DAILY BOSS</Text>
-                   <Text style={[styles.dailyDesc, { color: activeTheme.subText }]}>Beat the 5-minute drill for bonus 500 XP!</Text>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <View style={styles.gameGrid}>
+          {games.map((g, i) => (
+            <MotiView key={g.id} from={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 150 }}>
+              <TouchableOpacity style={[styles.gameCard, { backgroundColor: activeTheme.card, borderColor: activeTheme.border, borderWidth: 1 }]} nativeID={`game-card-${g.id}`}>
+                <View style={styles.gameIcon}>{g.icon}</View>
+                <Text style={[styles.gameTitle, { color: activeTheme.text }]}>{g.title}</Text>
+                <Text style={[styles.gameDesc, { color: activeTheme.subText }]}>{g.desc}</Text>
+                <View style={[styles.playBtn, { backgroundColor: activeTheme.accent }]}>
+                  <Play size={16} color="#fff" fill="#fff" />
+                  <Text style={styles.playBtnText}>ENTER</Text>
                 </View>
-                <TouchableOpacity onPress={() => router.push('/quiz')} style={[styles.dailyBtn, { backgroundColor: activeTheme.accent }]}>
-                   <Text style={styles.dailyBtnText}>BATTLE</Text>
-                </TouchableOpacity>
-             </MotiView>
-          </View>
-
-          <Text style={[styles.sectionTitle, { color: activeTheme.subText }]}>CHOOSE YOUR CHALLENGE</Text>
-
-          <View style={styles.gameGrid}>
-            {games.map((game, i) => (
-              <TouchableOpacity 
-                key={game.id} 
-                onPress={() => router.push(game.route)}
-                activeOpacity={0.9}
-                style={[styles.gameCard, { backgroundColor: game.color }]}
-              >
-                <MotiView
-                  from={{ scale: 0.9, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ type: 'spring', delay: 300 + (i * 100) }}
-                >
-                  <View style={styles.cardTop}>
-                    <View style={styles.iconCircle}>
-                      {game.icon}
-                    </View>
-                    <View style={styles.tagRow}>
-                       {game.tags.map(tag => (
-                         <View key={tag} style={styles.tag}><Text style={styles.tagText}>{tag}</Text></View>
-                       ))}
-                    </View>
-                  </View>
-
-                  <View style={styles.cardBottom}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.cardTitle}>{game.title}</Text>
-                      <Text style={styles.cardDesc}>{game.desc}</Text>
-                    </View>
-                    <View style={styles.xpBadge}>
-                       <Text style={styles.xpText}>{game.xp}</Text>
-                    </View>
-                  </View>
-                </MotiView>
               </TouchableOpacity>
-            ))}
-          </View>
+            </MotiView>
+          ))}
+        </View>
 
-          <View style={[styles.footerBanner, { backgroundColor: activeTheme.card, borderColor: activeTheme.border }]}>
-             <Star size={24} color="#fbbf24" fill="#fbbf24" />
-             <Text style={[styles.footerText, { color: activeTheme.text }]}>New Season starts in 2 days!</Text>
+        <View style={[styles.statsSection, { backgroundColor: activeTheme.card, borderColor: activeTheme.border, borderWidth: 1 }]}>
+          <View style={styles.statsHeader}>
+            <Trophy size={20} color="#fbbf24" />
+            <Text style={[styles.statsTitle, { color: activeTheme.text }]}>ARENA PERFORMANCE</Text>
           </View>
-
-        </MotiView>
+          <View style={styles.statsRow}>
+            <View style={styles.statItem}>
+              <Text style={[styles.statValue, { color: activeTheme.text }]}>0</Text>
+              <Text style={styles.statLabel}>WINS</Text>
+            </View>
+            <View style={styles.statItem}>
+              <Text style={[styles.statValue, { color: activeTheme.text }]}>0%</Text>
+              <Text style={styles.statLabel}>RANK</Text>
+            </View>
+          </View>
+        </View>
       </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: { flex: 1, padding: 24, paddingTop: 60 },
+  header: { marginBottom: 30 },
+  title: { fontSize: 32, fontWeight: '900', textTransform: 'uppercase' },
+  subtitle: { fontSize: 14, fontWeight: '600', opacity: 0.6 },
   scrollContent: { paddingBottom: 150 },
-  viewContainer: { padding: 24, paddingTop: 60 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 30 },
-  title: { fontSize: 34, fontWeight: '900', letterSpacing: -1.5 },
-  subtitle: { fontSize: 13, marginTop: 4, fontWeight: '700', opacity: 0.8 },
-  streakBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(249, 115, 22, 0.1)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 15, borderWidth: 1, borderColor: '#f97316' },
-  streakText: { color: '#f97316', fontWeight: '900', fontSize: 16 },
-  dailyChallenge: { marginBottom: 35 },
-  dailyCard: { borderRadius: 32, padding: 25, borderStyle: 'dashed', borderWidth: 2, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  dailyTitle: { fontSize: 18, fontWeight: '900', letterSpacing: 1 },
-  dailyDesc: { fontSize: 12, fontWeight: '600', maxWidth: 160 },
-  dailyBtn: { paddingHorizontal: 20, paddingVertical: 12, borderRadius: 15, elevation: 4 },
-  dailyBtnText: { color: '#fff', fontWeight: '900', fontSize: 12 },
-  sectionTitle: { fontSize: 11, fontWeight: '900', letterSpacing: 2, marginBottom: 20 },
-  gameGrid: { gap: 20 },
-  gameCard: { borderRadius: 35, padding: 25, elevation: 10, shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.3, shadowRadius: 10 },
-  cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 25 },
-  iconCircle: { width: 65, height: 65, borderRadius: 25, backgroundColor: 'rgba(255,255,255,0.25)', justifyContent: 'center', alignItems: 'center' },
-  tagRow: { flexDirection: 'row', gap: 6 },
-  tag: { backgroundColor: 'rgba(0,0,0,0.15)', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8 },
-  tagText: { color: '#fff', fontSize: 9, fontWeight: '900' },
-  cardBottom: { flexDirection: 'row', alignItems: 'flex-end', gap: 15 },
-  cardTitle: { color: '#fff', fontSize: 26, fontWeight: '900', letterSpacing: -0.5 },
-  cardDesc: { color: 'rgba(255,255,255,0.85)', fontSize: 13, marginTop: 4, fontWeight: '600' },
-  xpBadge: { backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 },
-  xpText: { color: '#fff', fontWeight: '900', fontSize: 13 },
-  footerBanner: { marginTop: 30, padding: 25, borderRadius: 30, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12, borderWidth: 1 },
-  footerText: { fontSize: 14, fontWeight: '800' }
+  gameGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 15, marginBottom: 30 },
+  gameCard: { width: (SCREEN_WIDTH - 63) / 2, padding: 25, borderRadius: 35, alignItems: 'center', textAlign: 'center' },
+  gameIcon: { marginBottom: 20, width: 64, height: 64, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.05)', justifyContent: 'center', alignItems: 'center' },
+  gameTitle: { fontSize: 16, fontWeight: '900', marginBottom: 8, textAlign: 'center' },
+  gameDesc: { fontSize: 10, fontWeight: '600', textAlign: 'center', opacity: 0.7, marginBottom: 20, height: 30 },
+  playBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 15, paddingVertical: 10, borderRadius: 12 },
+  playBtnText: { color: '#fff', fontSize: 10, fontWeight: '900' },
+  statsSection: { borderRadius: 32, padding: 25 },
+  statsHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 20 },
+  statsTitle: { fontSize: 12, fontWeight: '900', letterSpacing: 1 },
+  statsRow: { flexDirection: 'row', justifyContent: 'space-around' },
+  statItem: { alignItems: 'center' },
+  statValue: { fontSize: 24, fontWeight: '900' },
+  statLabel: { fontSize: 8, fontWeight: '900', opacity: 0.4, letterSpacing: 1 }
 });
