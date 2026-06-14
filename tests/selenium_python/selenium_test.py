@@ -81,14 +81,21 @@ class ComprehensiveTest:
         time.sleep(1)
 
         # 5. Section: Theme Picker
-        self.log("Step 5: Feature - Universe Selector")
-        self.home_page.js_click((By.CSS_SELECTOR, '[aria-label="nav-home-btn"]'))
-        time.sleep(1)
+        self.log("Step 5: Feature - Universe Selector (via Lab)")
+        self.home_page.js_click((By.CSS_SELECTOR, '[aria-label="nav-lab-btn"]'))
+        time.sleep(1.5)
         self.home_page.click((By.ID, "theme-toggle"))
         time.sleep(1)
         # Change to Sky High theme
         self.home_page.click((By.ID, "theme-option-sky"))
         self.log("Universe changed to 'Sky High'.")
+        time.sleep(1)
+        # Close the modal
+        self.home_page.js_click((By.ID, "close-settings-btn"))
+        time.sleep(1)
+        
+        # We will navigate to home for the reading flow
+        self.home_page.js_click((By.CSS_SELECTOR, '[aria-label="nav-home-btn"]'))
         time.sleep(1)
 
         # 6. Section: Reading Flow
@@ -96,8 +103,8 @@ class ComprehensiveTest:
         suggestion = (By.CSS_SELECTOR, '[id^="suggestion-word-"]')
         suggestion_text = self.home_page.get_text(suggestion)
         self.log(f"Entering Vortex for: {suggestion_text}")
-        self.home_page.click(suggestion)
-        self.home_page.click((By.ID, "explore-btn"))
+        self.home_page.js_click(suggestion)
+        self.home_page.js_click((By.ID, "explore-btn"))
         
         self.log("Waiting for Vortex generation...")
         time.sleep(4) 
@@ -111,8 +118,19 @@ class ComprehensiveTest:
             word_span = (By.CSS_SELECTOR, '[id^="word-span-"]')
             self.reading_page.js_click(word_span)
             time.sleep(1)
-            self.reading_page.click((By.ID, "add-to-vortex-btn"))
+            self.reading_page.js_click((By.ID, "add-to-vortex-btn"))
+            time.sleep(1)
+            try:
+                alert = self.driver.switch_to.alert
+                self.log(f"Alert accepted: {alert.text}")
+                alert.accept()
+            except:
+                pass
             self.log("Bookmark added via Vortex.")
+
+        # Navigate back to Home from Reading before going to Lab, because Reading is a pushed route
+        self.home_page.js_click((By.CSS_SELECTOR, '[aria-label="nav-home-btn"]'))
+        time.sleep(1)
 
         # 7. Section: Lab (Trainer)
         self.log("Step 7: Journey - Progress Lab")

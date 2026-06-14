@@ -104,7 +104,7 @@ export default function Home() {
             </View>
             <View style={styles.pillContainer}>
               {suggestions.map((w, i) => (
-                <TouchableOpacity key={i} onPress={() => setInputWord(w)} style={[styles.pill, { backgroundColor: activeTheme.bg, borderColor: activeTheme.border, borderWidth: 1 }]}>
+                <TouchableOpacity key={i} onPress={() => setInputWord(w)} style={[styles.pill, { backgroundColor: activeTheme.bg, borderColor: activeTheme.border, borderWidth: 1 }]} nativeID={`suggestion-word-${i}`}>
                   <Text style={[styles.pillText, { color: activeTheme.text }]}>{w}</Text>
                 </TouchableOpacity>
               ))}
@@ -119,7 +119,7 @@ export default function Home() {
               value={inputWord} 
               onChangeText={setInputWord} 
             />
-            <TouchableOpacity onPress={() => handleStart()} style={[styles.exploreBtn, { backgroundColor: activeTheme.accent }]}><ChevronRight size={24} color="#fff" /></TouchableOpacity>
+            <TouchableOpacity onPress={() => handleStart()} style={[styles.exploreBtn, { backgroundColor: activeTheme.accent }]} nativeID="explore-btn"><ChevronRight size={24} color="#fff" /></TouchableOpacity>
           </View>
         </View>
 

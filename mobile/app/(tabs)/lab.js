@@ -123,7 +123,7 @@ export default function Lab() {
   if (loading) return <View style={{ flex: 1, backgroundColor: activeTheme.bg }}><LoadingSpinner activeTheme={activeTheme} text="ANALYZING PROGRESS..." /></View>;
 
   return (
-    <View style={{ flex: 1, backgroundColor: activeTheme.bg }}>
+    <View style={{ flex: 1, backgroundColor: activeTheme.bg }} nativeID="trainer-pane">
       <ScrollView 
         contentContainerStyle={styles.scrollContent} 
         showsVerticalScrollIndicator={false}
@@ -136,7 +136,7 @@ export default function Lab() {
           {/* Header */}
           <View style={styles.headerRow}>
              <Text style={[styles.pageTitle, { color: activeTheme.text }]}>Your <Text style={{ color: activeTheme.accent }}>Lab</Text></Text>
-             <TouchableOpacity onPress={() => setShowSettings(true)} style={[styles.iconBtn, { backgroundColor: activeTheme.card, borderColor: activeTheme.border }]}>
+             <TouchableOpacity onPress={() => setShowSettings(true)} style={[styles.iconBtn, { backgroundColor: activeTheme.card, borderColor: activeTheme.border }]} nativeID="theme-toggle">
                <Settings size={20} color={activeTheme.accent} />
              </TouchableOpacity>
           </View>
@@ -230,7 +230,7 @@ export default function Lab() {
            <MotiView from={{ translateY: 300 }} animate={{ translateY: 0 }} style={[styles.settingsModal, { backgroundColor: activeTheme.bg, borderColor: activeTheme.accent }]}>
               <View style={styles.modalHeader}>
                  <Text style={[styles.modalTitle, { color: activeTheme.text }]}>Settings & Themes</Text>
-                 <TouchableOpacity onPress={() => setShowSettings(false)}><X color={activeTheme.text} size={28} /></TouchableOpacity>
+                 <TouchableOpacity onPress={() => setShowSettings(false)} nativeID="close-settings-btn"><X color={activeTheme.text} size={28} /></TouchableOpacity>
               </View>
 
               <ScrollView showsVerticalScrollIndicator={false}>
@@ -246,7 +246,7 @@ export default function Lab() {
                 <Text style={[styles.settingsTitle, { color: activeTheme.subText, marginTop: 30 }]}>CHOOSE UNIVERSE</Text>
                 <View style={styles.themeGrid}>
                    {Object.entries(themes).map(([k, t]) => (
-                     <TouchableOpacity key={k} onPress={() => setTheme(k)} style={[styles.themeCard, { backgroundColor: t.bg, borderColor: themeKey === k ? t.accent : activeTheme.border }]}>
+                     <TouchableOpacity key={k} onPress={() => setTheme(k)} style={[styles.themeCard, { backgroundColor: t.bg, borderColor: themeKey === k ? t.accent : activeTheme.border }]} nativeID={`theme-option-${k}`}>
                         <View style={[styles.colorDot, { backgroundColor: t.accent }]} />
                         <Text style={[styles.themeLabel, { color: t.text }]}>{t.name}</Text>
                      </TouchableOpacity>
