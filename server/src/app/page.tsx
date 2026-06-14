@@ -19,7 +19,11 @@ import {
   Lightbulb,
   RotateCw,
   Sparkles,
-  User
+  User,
+  Film,
+  FileText,
+  Gamepad2,
+  Layout
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -234,10 +238,10 @@ const WordBuilderMiniGame = () => {
   }, [basketPos, collected, targetWord]);
 
   return (
-    <div className="flex flex-col items-center justify-center h-64 w-full relative overflow-hidden bg-white/5 rounded-[40px] border border-white/10">
+    <div className="flex flex-col items-center justify-center h-64 w-full relative overflow-hidden bg-white/5 rounded-[40px] border border-white/10" id="mini-game-container">
       <div className="absolute top-6 left-8 right-8 flex justify-between items-center opacity-40">
         <span className="text-[10px] font-black tracking-widest">MINI-CHALLENGE: {targetWord}</span>
-        <span className="text-[10px] font-black tracking-widest">PTS: {score}</span>
+        <span className="text-[10px] font-black tracking-widest" id="game-score">PTS: {score}</span>
       </div>
       <div className="text-4xl font-black tracking-[0.3em] mb-12">
         {targetWord.split('').map((l, i) => (
@@ -262,7 +266,7 @@ const WordBuilderMiniGame = () => {
 
 export default function Page() {
   const [themeKey, setThemeKey] = useState<keyof typeof themes>('verdant');
-  const [currentView, setCurrentView] = useState<'splash' | 'home' | 'reading' | 'trainer'>('splash');
+  const [currentView, setCurrentView] = useState<'splash' | 'home' | 'reading' | 'trainer' | 'notes' | 'movies' | 'games'>('splash');
   const [level, setLevel] = useState('A2');
   const [inputWord, setInputWord] = useState('');
   const [trainerQueue, setTrainerQueue] = useState<any[]>([]);
@@ -363,7 +367,7 @@ export default function Page() {
             </motion.div>
             <div className="flex gap-2">
             <button onClick={() => setShowThemePicker(true)} className={`${activeTheme.card} p-3 rounded-2xl ${activeTheme.button} active:scale-90 transition-transform`} id="theme-toggle"><Palette size={20} /></button>
-            <button className={`${activeTheme.card} p-3 rounded-2xl ${activeTheme.button}`}><Settings size={20} /></button>
+            <button className={`${activeTheme.card} p-3 rounded-2xl ${activeTheme.button}`} id="settings-btn"><Settings size={20} /></button>
             </div>
         </header>
       )}
@@ -394,14 +398,14 @@ export default function Page() {
           {currentView === 'home' && (
             <motion.div key="home" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }} className="space-y-10 py-6">
               
-              <div className={`${activeTheme.card} p-8 rounded-[48px] border relative overflow-hidden group`}>
+              <div className={`${activeTheme.card} p-8 rounded-[48px] border relative overflow-hidden group`} id="vortex-entry-card">
                 <div className="absolute top-[-50px] right-[-50px] w-48 h-48 bg-white/5 rounded-full blur-3xl group-hover:bg-white/10 transition-all duration-1000" />
                 
                 <h2 className="text-4xl font-black mb-8 leading-tight tracking-tight uppercase italic">Step into <br/><span className={activeTheme.subText}>the Vortex</span></h2>
                 
                 <div className="space-y-8">
                   {/* Level Selector */}
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-2" id="level-selector">
                     {levels.map(lvl => (
                       <button 
                         key={lvl} onClick={() => setLevel(lvl)}
@@ -419,11 +423,12 @@ export default function Page() {
                       <button 
                         onClick={() => refreshSuggestions()}
                         className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-blue-400 hover:text-blue-300 transition-colors"
+                        id="randomize-suggestions-btn"
                       >
                         <RotateCw size={12} /> Randomize
                       </button>
                     </div>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap gap-2" id="suggestions-list">
                       {suggestions.map((w, idx) => (
                         <motion.button
                           key={w} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: idx * 0.05 }}
@@ -453,7 +458,7 @@ export default function Page() {
                     </button>
                   </div>
 
-                  <button onClick={() => setInputWord(wordOfTheDay)} className="flex items-center gap-2 text-[10px] font-black opacity-60 hover:opacity-100 transition-opacity tracking-[0.2em] uppercase">
+                  <button onClick={() => setInputWord(wordOfTheDay)} className="flex items-center gap-2 text-[10px] font-black opacity-60 hover:opacity-100 transition-opacity tracking-[0.2em] uppercase" id="word-of-day-btn">
                     <Sparkles size={12} className={activeTheme.subText} /> Word of Day: <span className="underline italic ml-1">{wordOfTheDay}</span>
                   </button>
                 </div>
@@ -461,7 +466,7 @@ export default function Page() {
 
               {/* Loop Status Grid */}
               <div className="grid grid-cols-2 gap-4">
-                <div className={`${activeTheme.card} p-7 rounded-[40px] flex flex-col justify-between h-36`}>
+                <div className={`${activeTheme.card} p-7 rounded-[40px] flex flex-col justify-between h-36`} id="queue-status-card">
                    <div className="flex justify-between items-start">
                      <RotateCw className={activeTheme.subText} size={22} />
                      <span className="text-[10px] font-black opacity-30 uppercase tracking-[0.3em]">Queue</span>
@@ -510,7 +515,7 @@ export default function Page() {
                             <React.Fragment key={i}>
                                 <span 
                                     onClick={() => setSelectedWord(w.replace(/[.,!?;:]/g, ''))}
-                                    className={`inline-block cursor-pointer rounded-xl px-1 hover:bg-white/10 transition-all word-span ${w.toLowerCase().includes(currentStory.word.toLowerCase()) ? `${activeTheme.subText} font-black underline decoration-4 underline-offset-8` : ''}`}
+                                    className={`inline-block cursor-pointer rounded-xl px-1 hover:bg-white/10 transition-all word-span ${w.toLowerCase().includes(currentStory?.word?.toLowerCase() || '') ? `${activeTheme.subText} font-black underline decoration-4 underline-offset-8` : ''}`}
                                 >
                                     {w}
                                 </span>
@@ -537,7 +542,7 @@ export default function Page() {
                                     <React.Fragment key={idx}>
                                         <span 
                                             onClick={() => setSelectedWord(w.replace(/[.,!?;:]/g, ''))}
-                                            className={`inline-block mr-2 text-base cursor-pointer hover:text-blue-400 transition-all py-1 rounded-lg ${w.toLowerCase().includes(currentStory.word.toLowerCase()) ? 'text-blue-400 font-black' : 'opacity-60'}`}
+                                            className={`inline-block mr-2 text-base cursor-pointer hover:text-blue-400 transition-all py-1 rounded-lg ${w.toLowerCase().includes(currentStory?.word?.toLowerCase() || '') ? 'text-blue-400 font-black' : 'opacity-60'}`}
                                         >
                                             {w}
                                         </span>
@@ -564,7 +569,7 @@ export default function Page() {
                   </div>
 
                   <div className="flex gap-4">
-                    <button className={`${activeTheme.card} flex-1 py-6 rounded-3xl font-black text-[10px] uppercase tracking-[0.3em] flex items-center justify-center gap-3 ${activeTheme.button}`}><Volume2 size={20} /> Listen</button>
+                    <button className={`${activeTheme.card} flex-1 py-6 rounded-3xl font-black text-[10px] uppercase tracking-[0.3em] flex items-center justify-center gap-3 ${activeTheme.button}`} id="listen-btn"><Volume2 size={20} /> Listen</button>
                     <button onClick={handleNext} id="next-drill-btn" className={`${activeTheme.accent} flex-[2.5] py-6 rounded-3xl font-black text-white shadow-2xl flex items-center justify-center gap-3 active:scale-95 transition-all tracking-[0.2em]`}>NEXT DRILL <ChevronRight size={24} /></button>
                   </div>
                 </>
@@ -573,7 +578,7 @@ export default function Page() {
           )}
 
           {currentView === 'trainer' && (
-            <motion.div key="trainer" initial={{ x: 300 }} animate={{ x: 0 }} exit={{ x: 300 }} className="space-y-8">
+            <motion.div key="trainer" initial={{ x: 300 }} animate={{ x: 0 }} exit={{ x: 300 }} className="space-y-8" id="trainer-pane">
               <div className="flex items-center gap-5">
                 <button onClick={() => setCurrentView('home')} className="p-3 bg-white/5 rounded-2xl" id="back-to-home"><ChevronRight className="rotate-180"/></button>
                 <h2 className="text-3xl font-black tracking-tighter uppercase italic">Training Vortex</h2>
@@ -595,6 +600,53 @@ export default function Page() {
               </div>
             </motion.div>
           )}
+
+          {currentView === 'notes' && (
+            <motion.div key="notes" initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="space-y-8" id="notes-pane">
+               <h2 className="text-4xl font-black italic uppercase tracking-tighter">My Notes</h2>
+               <div className="bg-white/5 border border-white/10 p-12 rounded-[48px] text-center space-y-6">
+                  <FileText size={64} className="mx-auto opacity-20" />
+                  <p className="font-black uppercase tracking-[0.3em] opacity-40 text-xs">No active field notes found</p>
+                  <button className={`${activeTheme.accent} px-8 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest text-white shadow-xl`}>Create New Note</button>
+               </div>
+            </motion.div>
+          )}
+
+          {currentView === 'movies' && (
+            <motion.div key="movies" initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="space-y-8" id="movies-pane">
+               <h2 className="text-4xl font-black italic uppercase tracking-tighter">Cinematic Vortex</h2>
+               <div className="grid grid-cols-1 gap-6">
+                 {[1,2,3].map(i => (
+                    <div key={i} className={`${activeTheme.card} p-8 rounded-[40px] flex items-center gap-6 border-white/5 movie-card`}>
+                       <div className="w-20 h-28 bg-white/5 rounded-2xl flex items-center justify-center"><Film size={32} className="opacity-20" /></div>
+                       <div>
+                         <h3 className="text-xl font-black italic">Archived Stream #0{i}</h3>
+                         <span className="text-[10px] font-black opacity-30 uppercase tracking-widest">Enhanced Subtitles Ready</span>
+                       </div>
+                    </div>
+                 ))}
+               </div>
+            </motion.div>
+          )}
+
+          {currentView === 'games' && (
+            <motion.div key="games" initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="space-y-8" id="games-pane">
+               <h2 className="text-4xl font-black italic uppercase tracking-tighter">Arena</h2>
+               <div className="grid grid-cols-2 gap-4">
+                 <div className={`${activeTheme.card} p-10 rounded-[56px] text-center space-y-6 border-white/5 game-card`}>
+                    <Zap size={40} className="mx-auto text-yellow-500" />
+                    <h3 className="font-black uppercase tracking-tighter italic">Vortex Guess</h3>
+                    <button className="w-full py-4 bg-white/5 rounded-2xl font-black text-[10px] uppercase tracking-widest">Play</button>
+                 </div>
+                 <div className={`${activeTheme.card} p-10 rounded-[56px] text-center space-y-6 border-white/5 game-card`}>
+                    <Layout size={40} className="mx-auto text-blue-500" />
+                    <h3 className="font-black uppercase tracking-tighter italic">Semantic Match</h3>
+                    <button className="w-full py-4 bg-white/5 rounded-2xl font-black text-[10px] uppercase tracking-widest">Play</button>
+                 </div>
+               </div>
+            </motion.div>
+          )}
+
         </AnimatePresence>
       </main>
 
@@ -603,8 +655,10 @@ export default function Page() {
         <div className="fixed bottom-10 left-10 right-10 z-30">
             <div className={`${activeTheme.card} p-3 rounded-[40px] flex justify-around items-center border-white/5 shadow-[0_20px_50px_rgba(0,0,0,0.5)] backdrop-blur-3xl`}>
             <button onClick={() => setCurrentView('home')} className={`p-5 rounded-[28px] transition-all nav-home-btn ${currentView === 'home' ? activeTheme.accent + ' text-white shadow-2xl' : 'opacity-40 hover:opacity-100'}`}><Zap size={24}/></button>
+            <button onClick={() => setCurrentView('notes')} className={`p-5 rounded-[28px] transition-all nav-notes-btn ${currentView === 'notes' ? activeTheme.accent + ' text-white shadow-2xl' : 'opacity-40 hover:opacity-100'}`}><FileText size={24}/></button>
+            <button onClick={() => setCurrentView('movies')} className={`p-5 rounded-[28px] transition-all nav-movies-btn ${currentView === 'movies' ? activeTheme.accent + ' text-white shadow-2xl' : 'opacity-40 hover:opacity-100'}`}><Film size={24}/></button>
+            <button onClick={() => setCurrentView('games')} className={`p-5 rounded-[28px] transition-all nav-games-btn ${currentView === 'games' ? activeTheme.accent + ' text-white shadow-2xl' : 'opacity-40 hover:opacity-100'}`}><Gamepad2 size={24}/></button>
             <button onClick={() => setCurrentView('trainer')} className={`p-5 rounded-[28px] transition-all nav-trainer-btn ${currentView === 'trainer' ? activeTheme.accent + ' text-white shadow-2xl' : 'opacity-40 hover:opacity-100'}`}><RotateCw size={24}/></button>
-            <button className="p-5 rounded-[28px] opacity-20 cursor-not-allowed"><Trophy size={24}/></button>
             </div>
         </div>
       )}
@@ -613,7 +667,7 @@ export default function Page() {
       <AnimatePresence>
         {showThemePicker && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/95 backdrop-blur-3xl p-10 flex flex-col" id="theme-picker-modal">
-            <div className="flex justify-between items-center mb-16"><h2 className="text-3xl font-black text-white italic uppercase tracking-tighter">Choose Universe</h2><button onClick={() => setShowThemePicker(false)} className="text-white bg-white/10 p-3 rounded-full"><X/></button></div>
+            <div className="flex justify-between items-center mb-16"><h2 className="text-3xl font-black text-white italic uppercase tracking-tighter">Choose Universe</h2><button onClick={() => setShowThemePicker(false)} className="text-white bg-white/10 p-3 rounded-full" id="close-theme-picker"><X/></button></div>
             <div className="grid grid-cols-2 gap-5 flex-1 overflow-y-auto pb-20 no-scrollbar">
               {Object.entries(themes).map(([key, t]) => (
                 <button key={key} onClick={() => { setThemeKey(key as keyof typeof themes); setShowThemePicker(false); }} className={`${t.bg} border ${themeKey === key ? 'border-white scale-[1.02]' : 'border-white/10'} p-10 rounded-[56px] text-left transition-all h-56 flex flex-col justify-between group active:scale-95 theme-option`}>
@@ -634,7 +688,7 @@ export default function Page() {
               <p className="opacity-40 mb-12 italic text-sm font-bold leading-relaxed">Catch this word in your future Vortex stories by adding it to your training loop.</p>
               <div className="flex flex-col gap-4">
                 <button onClick={() => addToTrainer(selectedWord!)} id="add-to-vortex-btn" className={`w-full py-6 rounded-[28px] ${activeTheme.accent} text-white font-black shadow-2xl flex items-center justify-center gap-3 active:scale-95 transition-all uppercase tracking-widest text-xs`}><Bookmark size={18} /> Add to Vortex</button>
-                <button onClick={() => setSelectedWord(null)} className="w-full py-4 opacity-30 font-black uppercase tracking-widest text-[10px]">Abandon Insight</button>
+                <button onClick={() => setSelectedWord(null)} className="w-full py-4 opacity-30 font-black uppercase tracking-widest text-[10px]" id="close-word-insight">Abandon Insight</button>
               </div>
             </motion.div>
           </div>
@@ -645,13 +699,13 @@ export default function Page() {
         {selectedDrill && (
           <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-8 bg-black/90 backdrop-blur-xl" id="drill-insight-modal">
             <motion.div initial={{ y: 300, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 300, opacity: 0 }} className={`${activeTheme.card} p-10 rounded-[56px] w-full max-w-md`}>
-              <div className="flex justify-between items-start mb-8"><div className={`p-4 rounded-3xl ${activeTheme.accent}/10 text-blue-400 border border-blue-400/20`}><Lightbulb size={28} /></div><button onClick={() => setSelectedDrill(null)} className="opacity-20 p-2"><X size={24} /></button></div>
+              <div className="flex justify-between items-start mb-8"><div className={`p-4 rounded-3xl ${activeTheme.accent}/10 text-blue-400 border border-blue-400/20`}><Lightbulb size={28} /></div><button onClick={() => setSelectedDrill(null)} className="opacity-20 p-2" id="close-drill-insight-x"><X size={24} /></button></div>
               <h4 className="text-[10px] font-black uppercase opacity-20 tracking-[0.5em] mb-6 text-center">Drill Insight</h4>
               <p className="text-2xl font-serif italic mb-10 leading-relaxed text-center opacity-90">"{selectedDrill.sentence}"</p>
               <div className="bg-white/5 p-8 rounded-[40px] border border-white/5 mb-12 shadow-inner"><p className="text-base opacity-70 leading-relaxed italic text-center font-medium">"{selectedDrill.explanation}"</p></div>
               <div className="flex gap-4">
-                <button onClick={() => addToTrainer(currentStory.word)} className={`flex-1 py-6 rounded-[24px] ${activeTheme.accent} text-white font-black shadow-2xl flex items-center justify-center gap-3 active:scale-95 transition-all text-[10px] uppercase tracking-widest`}><Bookmark size={16} /> Loop Core Word</button>
-                <button onClick={() => setSelectedDrill(null)} className="px-8 rounded-[24px] bg-white/10 font-black text-[10px] uppercase tracking-widest hover:bg-white/20 transition-all">Done</button>
+                <button onClick={() => addToTrainer(currentStory.word)} className={`flex-1 py-6 rounded-[24px] ${activeTheme.accent} text-white font-black shadow-2xl flex items-center justify-center gap-3 active:scale-95 transition-all text-[10px] uppercase tracking-widest`} id="loop-core-word-btn"><Bookmark size={16} /> Loop Core Word</button>
+                <button onClick={() => setSelectedDrill(null)} className="px-8 rounded-[24px] bg-white/10 font-black text-[10px] uppercase tracking-widest hover:bg-white/20 transition-all" id="close-drill-insight-done">Done</button>
               </div>
             </motion.div>
           </div>
