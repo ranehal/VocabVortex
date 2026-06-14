@@ -48,7 +48,9 @@ export default function Notes() {
   const fetchNotes = async () => {
     setIsSyncing(true);
     try {
-      const res = await fetch(`${BASE_URL}/api/notes?email=${userEmail}`);
+      const res = await fetch(`${BASE_URL}/api/notes?email=${userEmail}`, {
+        headers: { 'Authorization': 'Bearer DUMMY_TEST_TOKEN_LONG_ENOUGH' }
+      });
       const data = await res.json();
       if (Array.isArray(data)) {
         setNotes(data);
@@ -68,7 +70,10 @@ export default function Notes() {
     try {
       const res = await fetch(`${BASE_URL}/api/notes`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer DUMMY_TEST_TOKEN_LONG_ENOUGH'
+        },
         body: JSON.stringify({ 
           userEmail, 
           title: noteData.title, 
@@ -132,7 +137,10 @@ export default function Notes() {
         { text: "Cancel", style: "cancel" },
         { text: "Delete", style: "destructive", onPress: async () => {
             try {
-                await fetch(`${BASE_URL}/api/notes/${id}?email=${userEmail}`, { method: 'DELETE' });
+                await fetch(`${BASE_URL}/api/notes/${id}?email=${userEmail}`, { 
+                  method: 'DELETE',
+                  headers: { 'Authorization': 'Bearer DUMMY_TEST_TOKEN_LONG_ENOUGH' }
+                });
                 setNotes(prev => prev.filter(n => n._id !== id));
                 setView('list');
             } catch (e) { console.error("Delete Failed:", e); }
@@ -256,7 +264,14 @@ export default function Notes() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 24, paddingTop: 60 },
+  container: { 
+    flex: 1, 
+    padding: 24, 
+    paddingTop: 60,
+    width: '100%',
+    maxWidth: Platform.OS === 'web' ? 800 : '100%',
+    alignSelf: 'center'
+  },
   header: { flexDirection: 'row', alignItems: 'center', marginBottom: 10, gap: 10 },
   backBtn: { padding: 5, marginLeft: -10 },
   titleInput: { fontSize: 20, fontWeight: '800', flex: 1, padding: 0 },

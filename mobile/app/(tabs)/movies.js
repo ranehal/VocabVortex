@@ -61,7 +61,9 @@ export default function Movies() {
   const [onlineResults, setOnlineResults] = useState([]);
   const [selectedOnline, setSelectedOnline] = useState(null);
   const [onlineSubs, setOnlineSubs] = useState([]);
-  const [scrubberWidth, setScrubberWidth] = useState(0);
+  const [jumpH, setJumpH] = useState(0);
+  const [jumpM, setJumpM] = useState(0);
+  const [jumpS, setJumpS] = useState(0);
   const [translatingLine, setTranslatingLine] = useState(null);
   const [highlightedIndex, setHighlightedIndex] = useState(null);
   const flatListRef = useRef(null);
@@ -187,56 +189,20 @@ export default function Movies() {
     } catch (e) { } finally { setTranslatingLine(null); }
   };
 
-  const totalDuration = useMemo(() => {
-      if (dialogues.length === 0) return 0;
-      const last = dialogues[dialogues.length - 1];
-      return last.endTime || timeToSeconds(last.timestamp) + 5;
-  }, [dialogues]);
-
-  const jumpToTime = (targetSec) => {
-    setPlaybackPosition(targetSec);
-    const index = filteredDialogues.findIndex(d => (d.startTime || timeToSeconds(d.timestamp)) >= targetSec);
+  const handleJump = () => {
+    const targetSec = (jumpH * 3600) + (jumpM * 60) + jumpS;
+    const index = filteredDialogues.findIndex(d => timeToSeconds(d.timestamp) >= targetSec);
     if (index !== -1) {
       if (flatListRef.current) {
-        flatListRef.current.scrollToIndex({ index, animated: true, viewPosition: 0.5 });
+        flatListRef.current.scrollToIndex({ index, animated: true, viewPosition: 0 });
       }
       setHighlightedIndex(index);
       setTimeout(() => setHighlightedIndex(null), 3000);
-      
-      if (localVideoUri && videoRef.current) {
-          videoRef.current.setPositionAsync(targetSec * 1000);
-      } else {
-          const target = filteredDialogues[index];
-          const realIndex = dialogues.indexOf(target);
-          if (realIndex !== -1 && !target.bn) translateLine(realIndex, target.en);
-      }
-    } else {
-        if (localVideoUri && videoRef.current) videoRef.current.setPositionAsync(targetSec * 1000);
-    }
+      const target = filteredDialogues[index];
+      const realIndex = dialogues.indexOf(target);
+      if (realIndex !== -1 && !target.bn) translateLine(realIndex, target.en);
+    } else { alert("Time beyond subtitles."); }
   };
-
-  const handleScrub = (evt) => {
-      if (scrubberWidth === 0 || totalDuration === 0) return;
-      const locX = evt.nativeEvent.locationX;
-      const percentage = Math.max(0, Math.min(1, locX / scrubberWidth));
-      const targetSec = percentage * totalDuration;
-      jumpToTime(targetSec);
-  };
-
-  const formatTime = (secs) => {
-      if (isNaN(secs) || secs < 0) return "00:00:00";
-      const h = Math.floor(secs / 3600);
-      const m = Math.floor((secs % 3600) / 60);
-      const s = Math.floor(secs % 60);
-      return `${h > 0 ? h.toString().padStart(2, '0') + ':' : ''}{m.toString().padStart(2, '0')}:{s.toString().padStart(2, '0')}`;
-  };
-
-  const handleViewableItemsChanged = useRef(({ viewableItems }) => {
-     if (viewableItems.length > 0 && !localVideoUri) {
-         const topItem = viewableItems[0].item;
-         if (topItem) setPlaybackPosition(topItem.startTime || timeToSeconds(topItem.timestamp));
-     }
-  }).current;
 
   const renderDialogueText = (text) => {
     return (
@@ -415,31 +381,16 @@ export default function Movies() {
             ) : (
                 <View style={[styles.heroCard, { backgroundColor: activeTheme.card, borderColor: activeTheme.border }]}>
                     <Text style={{ color: activeTheme.text, fontSize: 20, fontWeight: 'bold' }} numberOfLines={1}>{selectedMovie.title}</Text>
-                    <View style={[styles.jumpBox, { backgroundColor: activeTheme.bg, borderColor: activeTheme.border, flexDirection: 'column', alignItems: 'stretch' }]}>
-                       <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
-                           <Text style={{ color: activeTheme.text, fontWeight: 'bold' }}>{formatTime(playbackPosition)}</Text>
-                           <Text style={{ color: activeTheme.subText, fontWeight: '600' }}>{formatTime(totalDuration)}</Text>
-                       </View>
-                       <TouchableOpacity 
-                           activeOpacity={1} 
-                           onPress={handleScrub}
-                           onLayout={(e) => setScrubberWidth(e.nativeEvent.layout.width)}
-                           style={{ height: 40, justifyContent: 'center' }}
-                           nativeID="jump-btn"
-                       >
-                           <View style={{ height: 10, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 5, overflow: 'hidden' }}>
-                               <MotiView 
-                                 animate={{ width: `${totalDuration > 0 ? (playbackPosition / totalDuration) * 100 : 0}%` }}
-                                 transition={{ type: 'timing', duration: 150 }}
-                                 style={{ height: '100%', backgroundColor: activeTheme.accent }}
-                               />
-                           </View>
-                           <MotiView 
-                               animate={{ left: `${totalDuration > 0 ? (playbackPosition / totalDuration) * 100 : 0}%` }}
-                               transition={{ type: 'timing', duration: 150 }}
-                               style={{ position: 'absolute', width: 20, height: 20, borderRadius: 10, backgroundColor: activeTheme.text, marginLeft: -10, elevation: 5, shadowColor: '#000', shadowOffset: {width: 0, height: 2}, shadowOpacity: 0.5, shadowRadius: 4 }}
-                           />
-                       </TouchableOpacity>
+                    <View style={[styles.jumpBox, { backgroundColor: activeTheme.bg, borderColor: activeTheme.border }]}>
+                    <Clock size={16} color={activeTheme.accent} />
+                    <View style={styles.wheelContainer}>
+                        <WheelPicker range={24} value={jumpH} onChange={setJumpH} activeTheme={activeTheme} />
+                        <Text style={{ color: activeTheme.text, fontWeight: 'bold', fontSize: 24 }}>:</Text>
+                        <WheelPicker range={60} value={jumpM} onChange={setJumpM} activeTheme={activeTheme} />
+                        <Text style={{ color: activeTheme.text, fontWeight: 'bold', fontSize: 24 }}>:</Text>
+                        <WheelPicker range={60} value={jumpS} onChange={setJumpS} activeTheme={activeTheme} />
+                    </View>
+                    <TouchableOpacity onPress={handleJump} style={[styles.jumpBtn, { backgroundColor: activeTheme.accent }]} nativeID="jump-btn"><Text style={styles.jumpBtnText}>JUMP</Text></TouchableOpacity>
                     </View>
                 </View>
             )}
@@ -453,8 +404,6 @@ export default function Movies() {
             ref={flatListRef}
             data={filteredDialogues}
             keyExtractor={(item, index) => index.toString()}
-            onViewableItemsChanged={handleViewableItemsChanged}
-            viewabilityConfig={{ itemVisiblePercentThreshold: 50 }}
             renderItem={({ item: d, index: i }) => {
               const realIndex = dialogues.indexOf(d);
               const isHighlighted = (highlightedIndex === i) || (currentDialogue === d);
@@ -490,14 +439,21 @@ export default function Movies() {
             }}
           />
         </View>
-      )}
-      {loading && <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' }]}><LoadingSpinner activeTheme={activeTheme} /></View>}
+      )
+    }
+    {loading && <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' }]}><LoadingSpinner activeTheme={activeTheme} /></View>}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, paddingTop: 60 },
+  container: { 
+    flex: 1, 
+    paddingTop: 60,
+    width: '100%',
+    maxWidth: Platform.OS === 'web' ? 1200 : '100%',
+    alignSelf: 'center'
+  },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 24, marginBottom: 20 },
   iconButton: { padding: 12, borderRadius: 16, borderWidth: 1 },
   searchContainer: { flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1 },
@@ -517,9 +473,20 @@ const styles = StyleSheet.create({
   loaderIcon: { position: 'absolute', right: 15, bottom: 15 },
   subPicker: { padding: 20, borderRadius: 24, borderWidth: 1, maxHeight: '80%' },
   subItem: { paddingVertical: 15, borderBottomWidth: 1 },
-  videoContainer: { width: '100%', aspectRatio: 16/9, borderRadius: 20, overflow: 'hidden', backgroundColor: '#000' },
+  videoContainer: { 
+    width: '100%', 
+    aspectRatio: 16/9, 
+    borderRadius: 24, 
+    overflow: 'hidden', 
+    backgroundColor: '#000',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 15,
+    elevation: 10
+  },
   video: { flex: 1 },
-  subtitleOverlay: { position: 'absolute', bottom: 40, left: 10, right: 10, alignItems: 'center' },
-  subtitleText: { color: '#fff', backgroundColor: 'rgba(0,0,0,0.6)', paddingHorizontal: 10, paddingVertical: 5, fontSize: 16, textAlign: 'center', borderRadius: 5 }
+  subtitleOverlay: { position: 'absolute', bottom: 80, left: 10, right: 10, alignItems: 'center' },
+  subtitleText: { color: '#fff', backgroundColor: 'rgba(0,0,0,0.8)', paddingHorizontal: 20, paddingVertical: 10, fontSize: 20, fontWeight: '700', textAlign: 'center', borderRadius: 12, overflow: 'hidden' }
 });
 
