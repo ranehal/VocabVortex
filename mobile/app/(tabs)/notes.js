@@ -147,7 +147,10 @@ export default function Notes() {
     try {
       const response = await fetch(`${BASE_URL}/api/ai/process-note`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer DUMMY_TEST_TOKEN_LONG_ENOUGH'
+        },
         body: JSON.stringify({ note: currentNote.content, action })
       });
       const data = await response.json();
