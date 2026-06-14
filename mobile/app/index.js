@@ -172,7 +172,6 @@ export default function SplashScreen() {
              onPress={handleGuestLogin} 
              style={styles.guestBtn}
              disabled={authLoading}
-             nativeID="guest-login-btn"
            >
              <Text style={{ color: activeTheme.subText }}>Continue as Guest</Text>
            </TouchableOpacity>
