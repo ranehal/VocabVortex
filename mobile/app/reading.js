@@ -75,25 +75,27 @@ export default function Reading() {
             <View style={styles.dictTop}>
               <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                 <Text style={[styles.dictWord, { color: activeTheme.text }]}>{currentStory?.word}</Text>
-                <TouchableOpacity onPress={() => speak(currentStory?.word)} style={styles.speakerBtn}>
+                <TouchableOpacity onPress={() => speak(currentStory?.word)} style={styles.modalSpeakerBtn}>
                   <Volume2 size={24} color={activeTheme.accent} />
                 </TouchableOpacity>
               </View>
-              <TouchableOpacity onPress={() => addBookmark(currentStory?.word)}><Bookmark size={24} color={activeTheme.accent} /></TouchableOpacity>
+              <TouchableOpacity onPress={() => addBookmark(currentStory?.word)} nativeID="add-to-vortex-btn"><Bookmark size={24} color={activeTheme.accent} /></TouchableOpacity>
             </View>
             <Text style={[styles.dictPhonetic, { color: activeTheme.subText }]}>{currentStory?.phonetic} • {currentStory?.partOfSpeech}</Text>
-            <Text style={[styles.dictBengali, { color: activeTheme.text }]}>{currentStory?.bengaliDefinition}</Text>
+            <Text style={[styles.dictBengali, { color: activeTheme.text }]} nativeID="bengali-definition">{currentStory?.bengaliDefinition}</Text>
           </View>
 
-          <View style={[styles.storySection, { backgroundColor: activeTheme.card, borderColor: activeTheme.border, borderWidth: 1 }]}>
+          <View style={[styles.storySection, { backgroundColor: activeTheme.card, borderColor: activeTheme.border, borderWidth: 1 }]} nativeID="reading-pane">
             <Text style={[styles.sectionLabelText, { color: activeTheme.subText }]}>VORTEX PARAGRAPH (TAP ANY WORD)</Text>
-            <Text style={[styles.wordFlow, { color: activeTheme.text }]}>
+            <Text style={[styles.wordFlow, { color: activeTheme.text }]} nativeID="story-text">
               {currentStory?.story?.split(' ').map((w, i) => {
-                const isTarget = w.toLowerCase().includes(currentStory.word.toLowerCase());
+                const isTarget = w.toLowerCase().includes(currentStory?.word?.toLowerCase() || '');
                 return (
                   <Text 
                     key={i} 
                     onPress={() => handleTapWord(w)}
+                    nativeID={`word-span-${i}`}
+                    testID="word-span"
                     style={[
                       styles.flowWord, 
                       isTarget ? { color: activeTheme.accent, fontWeight: '900', textDecorationLine: 'underline' } : { opacity: 0.8 }
@@ -106,7 +108,7 @@ export default function Reading() {
             </Text>
           </View>
           
-          <TouchableOpacity onPress={() => router.back()} style={[styles.nextBtn, { backgroundColor: activeTheme.accent }]}>
+          <TouchableOpacity onPress={() => router.back()} style={[styles.nextBtn, { backgroundColor: activeTheme.accent }]} nativeID="next-drill-btn">
             <Text style={styles.nextBtnText}>BACK TO LAB</Text>
           </TouchableOpacity>
         </MotiView>

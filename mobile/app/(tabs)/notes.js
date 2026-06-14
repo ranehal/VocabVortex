@@ -181,7 +181,7 @@ export default function Notes() {
 
   if (view === 'list') {
     return (
-      <View style={{ flex: 1, backgroundColor: activeTheme.bg }}>
+      <View style={{ flex: 1, backgroundColor: activeTheme.bg }} nativeID="notes-pane">
         <View style={styles.listHeader}>
           <Text style={[styles.listTitle, { color: activeTheme.text }]}>My <Text style={{ color: activeTheme.accent }}>Notes</Text></Text>
           <View style={{ flexDirection: 'row', gap: 10 }}>

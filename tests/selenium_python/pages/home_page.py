@@ -5,7 +5,7 @@ class HomePage(BasePage):
     WORD_INPUT = (By.ID, "word-input")
     EXPLORE_BTN = (By.ID, "explore-btn")
     THEME_TOGGLE = (By.ID, "theme-toggle")
-    NAV_TRAINER_BTN = (By.CLASS_NAME, "nav-trainer-btn")
+    # nav-trainer-btn is handled via aria-label in selenium_test.py
 
     def enter_word(self, word):
         print(f"Entering word: {word}")

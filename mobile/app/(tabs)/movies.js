@@ -306,7 +306,7 @@ export default function Movies() {
       </View>
 
       {!selectedMovie ? (
-        <View style={{ flex: 1 }}>
+        <View style={{ flex: 1 }} nativeID="movies-pane">
           <View style={[styles.searchContainer, { borderBottomColor: activeTheme.border }]}>
             <TextInput style={{ flex: 1, color: activeTheme.text, height: 60, fontSize: 16, paddingHorizontal: 20 }} placeholder="Search Movies..." placeholderTextColor={activeTheme.subText} value={searchQuery} onChangeText={setSearchQuery} />
             <Search size={24} color={activeTheme.accent} style={{ marginRight: 20 }} />

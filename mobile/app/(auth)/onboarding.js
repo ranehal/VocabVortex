@@ -100,6 +100,7 @@ export default function Onboarding() {
         <TouchableOpacity 
           onPress={skipSurvey} 
           style={styles.skipBtn}
+          nativeID="skip-onboarding"
         >
           <Text style={[styles.skipBtnText, { color: activeTheme.subText }]}>Skip</Text>
         </TouchableOpacity>
@@ -119,7 +120,7 @@ export default function Onboarding() {
             <Text style={[styles.welcomeTitle, { color: activeTheme.text }]}>Welcome to the{"\n"}<Text style={{ color: activeTheme.accent }}>Vortex Journey</Text></Text>
             <Text style={[styles.welcomeSub, { color: activeTheme.subText }]}>Let's personalize your learning path in 30 seconds.</Text>
             
-            <TouchableOpacity onPress={nextStep} style={[styles.mainBtn, { backgroundColor: activeTheme.accent }]}>
+            <TouchableOpacity onPress={nextStep} style={[styles.mainBtn, { backgroundColor: activeTheme.accent }]} nativeID="start-journey-btn">
               <Text style={styles.mainBtnText}>START JOURNEY</Text>
               <Play size={20} color="#fff" fill="#fff" />
             </TouchableOpacity>

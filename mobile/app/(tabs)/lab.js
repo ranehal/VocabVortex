@@ -123,7 +123,7 @@ export default function Lab() {
   if (loading) return <View style={{ flex: 1, backgroundColor: activeTheme.bg }}><LoadingSpinner activeTheme={activeTheme} text="ANALYZING PROGRESS..." /></View>;
 
   return (
-    <View style={{ flex: 1, backgroundColor: activeTheme.bg }}>
+    <View style={{ flex: 1, backgroundColor: activeTheme.bg }} nativeID="trainer-pane">
       <ScrollView 
         contentContainerStyle={styles.scrollContent} 
         showsVerticalScrollIndicator={false}

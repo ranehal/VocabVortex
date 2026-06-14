@@ -1,8 +1,8 @@
 import { useState, useMemo, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Dimensions } from 'react-native';
-import { MotiView } from 'moti';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Dimensions, Modal } from 'react-native';
+import { MotiView, AnimatePresence } from 'moti';
 import { useApp } from '../_layout';
-import { ChevronRight, RotateCw, Zap, Sparkles, Star } from 'lucide-react-native';
+import { ChevronRight, RotateCw, Zap, Sparkles, Star, Palette, X } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { useRouter } from 'expo-router';
@@ -24,12 +24,13 @@ const levelWordsMap = {
 };
 
 export default function Home() {
-  const { activeTheme, bookmarks, handleTapWord } = useApp();
+  const { activeTheme, themes, themeKey, setTheme, bookmarks, handleTapWord } = useApp();
   const router = useRouter();
   const [level, setLevel] = useState('A2');
   const [inputWord, setInputWord] = useState('');
   const [suggestions, setSuggestions] = useState([]);
   const [learned, setLearned] = useState([]);
+  const [showThemePicker, setShowThemePicker] = useState(false);
 
   useEffect(() => {
     const loadData = async () => {
@@ -66,31 +67,36 @@ export default function Home() {
     <ScrollView contentContainerStyle={[styles.scrollContent, { backgroundColor: activeTheme.bg }]} showsVerticalScrollIndicator={false}>
       <MotiView from={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} style={styles.viewContainer}>
         
-        {/* Word of the Day Banner */}
-        <MotiView 
-          from={{ translateY: -20, opacity: 0 }} 
-          animate={{ translateY: 0, opacity: 1 }}
-          transition={{ type: 'spring', delay: 200 }}
-          style={[styles.wotdCard, { backgroundColor: activeTheme.accent }]}
-        >
-          <View style={styles.wotdHeader}>
-            <Sparkles size={16} color="#fff" />
-            <Text style={styles.wotdLabel}>WORD OF THE DAY</Text>
-          </View>
-          <TouchableOpacity onPress={() => handleTapWord(wordOfTheDay)}>
-            <Text style={styles.wotdText}>{wordOfTheDay.toUpperCase()}</Text>
-          </TouchableOpacity>
-        </MotiView>
+        {/* Header with Theme Toggle */}
+        <View style={styles.headerRow}>
+           <MotiView 
+            from={{ translateY: -20, opacity: 0 }} 
+            animate={{ translateY: 0, opacity: 1 }}
+            style={[styles.wotdMiniCard, { backgroundColor: activeTheme.accent }]}
+            >
+                <Sparkles size={12} color="#fff" />
+                <Text style={styles.wotdMiniLabel}>WORD OF DAY: {wordOfTheDay.toUpperCase()}</Text>
+            </MotiView>
+            <TouchableOpacity 
+                onPress={() => setShowThemePicker(true)} 
+                style={[styles.themeBtn, { backgroundColor: activeTheme.card, borderColor: activeTheme.border }]}
+                nativeID="theme-toggle"
+            >
+                <Palette size={20} color={activeTheme.accent} />
+            </TouchableOpacity>
+        </View>
 
         <View style={[styles.heroCard, { backgroundColor: activeTheme.card, borderColor: activeTheme.border, borderWidth: 1 }]}>
           <Text style={[styles.heroTitle, { color: activeTheme.text }]}>Step into{"\n"}<Text style={{ color: activeTheme.accent }}>the Vortex</Text></Text>
 
-          <View style={styles.levelRow}>
+          <View style={styles.levelRow} nativeID="level-selector">
             {levels.map(lvl => (
               <TouchableOpacity 
                 key={lvl} 
                 onPress={() => { setLevel(lvl); refreshSuggestions(lvl); }} 
                 style={[styles.levelBtn, level === lvl ? { backgroundColor: activeTheme.accent } : { borderColor: activeTheme.border, borderWidth: 1, opacity: 0.5 }]}
+                testID={`level-btn-${lvl}`}
+                nativeID={`level-btn-${lvl}`}
               >
                 <Text style={[styles.levelBtnText, { color: level === lvl ? '#fff' : activeTheme.text }]}>{lvl}</Text>
               </TouchableOpacity>
@@ -100,11 +106,11 @@ export default function Home() {
           <View style={styles.suggestionSection}>
             <View style={styles.suggestHeader}>
               <Text style={[styles.suggestLabel, { color: activeTheme.subText }]}>LEVEL SUGGESTIONS</Text>
-              <TouchableOpacity onPress={() => refreshSuggestions()}><RotateCw size={12} color={activeTheme.subText} /></TouchableOpacity>
+              <TouchableOpacity onPress={() => refreshSuggestions()} nativeID="randomize-suggestions-btn"><RotateCw size={12} color={activeTheme.subText} /></TouchableOpacity>
             </View>
-            <View style={styles.pillContainer}>
+            <View style={styles.pillContainer} nativeID="suggestions-list">
               {suggestions.map((w, i) => (
-                <TouchableOpacity key={i} onPress={() => setInputWord(w)} style={[styles.pill, { backgroundColor: activeTheme.bg, borderColor: activeTheme.border, borderWidth: 1 }]}>
+                <TouchableOpacity key={i} onPress={() => setInputWord(w)} style={[styles.pill, { backgroundColor: activeTheme.bg, borderColor: activeTheme.border, borderWidth: 1 }]} testID={`suggestion-word-${i}`} nativeID={`suggestion-word-${i}`}>
                   <Text style={[styles.pillText, { color: activeTheme.text }]}>{w}</Text>
                 </TouchableOpacity>
               ))}
@@ -118,8 +124,9 @@ export default function Home() {
               placeholderTextColor={activeTheme.subText}
               value={inputWord} 
               onChangeText={setInputWord} 
+              nativeID="word-input"
             />
-            <TouchableOpacity onPress={() => handleStart()} style={[styles.exploreBtn, { backgroundColor: activeTheme.accent }]}><ChevronRight size={24} color="#fff" /></TouchableOpacity>
+            <TouchableOpacity onPress={() => handleStart()} style={[styles.exploreBtn, { backgroundColor: activeTheme.accent }]} nativeID="explore-btn"><ChevronRight size={24} color="#fff" /></TouchableOpacity>
           </View>
         </View>
 
@@ -132,9 +139,36 @@ export default function Home() {
             <View style={[styles.progressBar, { backgroundColor: activeTheme.bg }]}>
               <MotiView from={{ width: 0 }} animate={{ width: `${progressPercent}%` }} style={[styles.progressFill, { backgroundColor: activeTheme.accent }]} />
             </View>
-            <Text style={[styles.progressText, { color: activeTheme.text }]}>{progressPercent}% Progress</Text>
+            <Text style={[styles.progressText, { color: activeTheme.text }]} nativeID="queue-count">{bookmarks.length}</Text>
+            <Text style={[styles.progressSubText, { color: activeTheme.subText }]}>Words in Vortex Queue</Text>
           </View>
         </View>
+
+        {/* Theme Picker Modal */}
+        <Modal visible={showThemePicker} transparent animationType="fade">
+            <View style={styles.modalOverlay}>
+                <MotiView from={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} style={[styles.modalContent, { backgroundColor: activeTheme.bg }]}>
+                    <View style={styles.modalHeader}>
+                        <Text style={[styles.modalTitle, { color: activeTheme.text }]}>CHOOSE UNIVERSE</Text>
+                        <TouchableOpacity onPress={() => setShowThemePicker(false)} id="close-theme-picker"><X size={24} color={activeTheme.text} /></TouchableOpacity>
+                    </View>
+                    <ScrollView contentContainerStyle={styles.themeGrid}>
+                        {Object.entries(themes).map(([k, t]) => (
+                            <TouchableOpacity 
+                                key={k} 
+                                onPress={() => { setTheme(k); setShowThemePicker(false); }} 
+                                style={[styles.themeCard, { backgroundColor: t.bg, borderColor: themeKey === k ? t.accent : activeTheme.border }]}
+                                nativeID={`theme-option-${k}`}
+                            >
+                                <View style={[styles.colorDot, { backgroundColor: t.accent }]} />
+                                <Text style={[styles.themeLabel, { color: t.text }]}>{t.name}</Text>
+                            </TouchableOpacity>
+                        ))}
+                    </ScrollView>
+                </MotiView>
+            </View>
+        </Modal>
+
       </MotiView>
     </ScrollView>
   );
@@ -142,11 +176,11 @@ export default function Home() {
 
 const styles = StyleSheet.create({
   scrollContent: { paddingBottom: 150 },
-  viewContainer: { padding: 24, paddingTop: 40 },
-  wotdCard: { padding: 20, borderRadius: 25, marginBottom: 20, elevation: 5 },
-  wotdHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 5 },
-  wotdLabel: { color: '#fff', fontSize: 10, fontWeight: '900', letterSpacing: 1 },
-  wotdText: { color: '#fff', fontSize: 32, fontWeight: '900', letterSpacing: -1 },
+  viewContainer: { padding: 24, paddingTop: 60 },
+  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+  wotdMiniCard: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 15 },
+  wotdMiniLabel: { color: '#fff', fontSize: 9, fontWeight: '900', letterSpacing: 0.5 },
+  themeBtn: { padding: 10, borderRadius: 12, borderWidth: 1 },
   heroCard: { borderRadius: 32, padding: 32, marginBottom: 20 },
   heroTitle: { fontSize: 36, fontWeight: '900', marginBottom: 24, textTransform: 'uppercase' },
   levelRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 24 },
@@ -167,5 +201,14 @@ const styles = StyleSheet.create({
   progressContainer: { marginBottom: 20 },
   progressBar: { height: 10, borderRadius: 5, overflow: 'hidden', marginBottom: 8 },
   progressFill: { height: '100%', borderRadius: 5 },
-  progressText: { fontSize: 12, fontWeight: '800' },
+  progressText: { fontSize: 32, fontWeight: '900' },
+  progressSubText: { fontSize: 10, fontWeight: '700', marginTop: 4 },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'center', alignItems: 'center', padding: 20 },
+  modalContent: { width: '100%', borderRadius: 30, padding: 25, borderWidth: 1 },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 25 },
+  modalTitle: { fontSize: 14, fontWeight: '900', letterSpacing: 2 },
+  themeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  themeCard: { width: '48%', padding: 15, borderRadius: 15, borderWidth: 2, flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
+  colorDot: { width: 12, height: 12, borderRadius: 6 },
+  themeLabel: { fontSize: 11, fontWeight: 'bold' }
 });

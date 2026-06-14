@@ -36,36 +36,42 @@ export default function TabLayout() {
         name="home"
         options={{
           tabBarIcon: ({ color }) => <Zap size={24} color={color} />,
+          tabBarAccessibilityLabel: 'nav-home-btn'
         }}
       />
       <Tabs.Screen
         name="read"
         options={{
           tabBarIcon: ({ color }) => <BookOpen size={24} color={color} />,
+          tabBarAccessibilityLabel: 'nav-read-btn'
         }}
       />
       <Tabs.Screen
         name="movies"
         options={{
           tabBarIcon: ({ color }) => <Clapperboard size={24} color={color} />,
+          tabBarAccessibilityLabel: 'nav-movies-btn'
         }}
       />
       <Tabs.Screen
         name="notes"
         options={{
           tabBarIcon: ({ color }) => <StickyNote size={24} color={color} />,
+          tabBarAccessibilityLabel: 'nav-notes-btn'
         }}
       />
       <Tabs.Screen
         name="arena"
         options={{
           tabBarIcon: ({ color }) => <Gamepad2 size={24} color={color} />,
+          tabBarAccessibilityLabel: 'nav-arena-btn'
         }}
       />
       <Tabs.Screen
         name="lab"
         options={{
           tabBarIcon: ({ color }) => <LayoutDashboard size={24} color={color} />,
+          tabBarAccessibilityLabel: 'nav-lab-btn'
         }}
       />
     </Tabs>

@@ -70,7 +70,7 @@ export default function Arena() {
   ];
 
   return (
-    <View style={[styles.container, { backgroundColor: activeTheme.bg }]}>
+    <View style={[styles.container, { backgroundColor: activeTheme.bg }]} nativeID="games-pane">
       <ScrollView 
         contentContainerStyle={styles.scrollContent} 
         showsVerticalScrollIndicator={false}
