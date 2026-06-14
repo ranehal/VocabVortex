@@ -107,7 +107,10 @@ export default function RootLayout() {
       const level = (await AsyncStorage.getItem('userLevel')) || 'A2';
       const response = await fetch(`${BASE_URL}/api/word`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer DUMMY_TEST_TOKEN_LONG_ENOUGH'
+        },
         body: JSON.stringify({ word: cleanWord, level })
       });
       const data = await response.json();

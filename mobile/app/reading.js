@@ -32,7 +32,10 @@ export default function Reading() {
     try {
       const response = await fetch(`${BASE_URL}/api/word`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer DUMMY_TEST_TOKEN_LONG_ENOUGH'
+        },
         body: JSON.stringify({ word, level })
       });
       const data = await response.json();
