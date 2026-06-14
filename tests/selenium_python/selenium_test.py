@@ -5,6 +5,8 @@ from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.action_chains import ActionChains
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 import time
 import sys
 import os
@@ -31,6 +33,7 @@ class ComprehensiveTest:
 
     def safe_alert_accept(self):
         try:
+            WebDriverWait(self.driver, 2).until(EC.alert_is_present())
             alert = self.driver.switch_to.alert
             self.log(f"Alert accepted: {alert.text}")
             alert.accept()
