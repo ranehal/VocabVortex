@@ -5,10 +5,6 @@ import { isAuthenticated } from '@/lib/auth';
 
 export async function GET(req: NextRequest) {
   try {
-    if (!isAuthenticated(req)) {
-      return NextResponse.json({ error: 'Unauthorized access' }, { status: 401 });
-    }
-
     await dbConnect();
 
     const topUsers = await User.find({})

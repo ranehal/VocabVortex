@@ -1,16 +1,15 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions, Modal, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Modal, RefreshControl, useWindowDimensions } from 'react-native';
 import { MotiView, AnimatePresence } from 'moti';
-import { useApp } from '../_layout';
+import { useApp, authFetch } from '../_layout';
 import { CheckCircle2, RotateCw, Trophy, Star, TrendingUp, ChevronRight, Palette, Settings, X } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { BASE_URL as API_BASE } from '../../constants';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-
 export default function Lab() {
+  const { width: SCREEN_WIDTH } = useWindowDimensions();
   const { activeTheme, user, setTheme, themeKey, themes, avatar, setAvatar, avatars } = useApp();
   const router = useRouter();
   const [userName, setUserName] = useState('');
@@ -63,9 +62,7 @@ export default function Lab() {
   const fetchUserData = async () => {
     try {
       const email = user?.email || (await AsyncStorage.getItem('userEmail')) || 'guest@vortex.com';
-      const res = await fetch(`${API_BASE}/api/user?email=${email}`, {
-        headers: { 'Authorization': 'Bearer DUMMY_TEST_TOKEN_LONG_ENOUGH' }
-      });
+      const res = await authFetch(`${API_BASE}/api/user?email=${email}`);
       const data = await res.json();
       if (res.ok) setUserStats({ xp: data.xp || 0, level: data.level || 1 });
       else console.log("User not found in DB yet, will be created on next XP gain.");
@@ -76,9 +73,7 @@ export default function Lab() {
 
   const fetchLeaderboard = async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/leaderboard`, {
-        headers: { 'Authorization': 'Bearer DUMMY_TEST_TOKEN_LONG_ENOUGH' }
-      });
+      const res = await authFetch(`${API_BASE}/api/leaderboard`);
       const data = await res.json();
       
       if (res.ok && Array.isArray(data)) {
@@ -102,11 +97,11 @@ export default function Lab() {
       const name = user?.name || (await AsyncStorage.getItem('userName')) || 'Explorer';
       const currentAvatar = avatar || (await AsyncStorage.getItem('vortex_avatar')) || '🚀';
 
-      await fetch(`${API_BASE}/api/user/xp`, {
+      await authFetch(`${API_BASE}/api/user/xp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          email, 
+        body: JSON.stringify({
+          email,
           xpToAdd: 50,
           name,
           picture: currentAvatar
@@ -127,7 +122,7 @@ export default function Lab() {
   if (loading) return <View style={{ flex: 1, backgroundColor: activeTheme.bg }}><LoadingSpinner activeTheme={activeTheme} text="ANALYZING PROGRESS..." /></View>;
 
   return (
-    <View style={{ flex: 1, backgroundColor: activeTheme.bg }} nativeID="trainer-pane">
+    <View style={{ flex: 1, backgroundColor: activeTheme.bg }}>
       <ScrollView 
         contentContainerStyle={styles.scrollContent} 
         showsVerticalScrollIndicator={false}
@@ -140,7 +135,7 @@ export default function Lab() {
           {/* Header */}
           <View style={styles.headerRow}>
              <Text style={[styles.pageTitle, { color: activeTheme.text }]}>Your <Text style={{ color: activeTheme.accent }}>Lab</Text></Text>
-             <TouchableOpacity onPress={() => setShowSettings(true)} style={[styles.iconBtn, { backgroundColor: activeTheme.card, borderColor: activeTheme.border }]} nativeID="theme-toggle">
+             <TouchableOpacity onPress={() => setShowSettings(true)} style={[styles.iconBtn, { backgroundColor: activeTheme.card, borderColor: activeTheme.border }]}>
                <Settings size={20} color={activeTheme.accent} />
              </TouchableOpacity>
           </View>
@@ -234,7 +229,7 @@ export default function Lab() {
            <MotiView from={{ translateY: 300 }} animate={{ translateY: 0 }} style={[styles.settingsModal, { backgroundColor: activeTheme.bg, borderColor: activeTheme.accent }]}>
               <View style={styles.modalHeader}>
                  <Text style={[styles.modalTitle, { color: activeTheme.text }]}>Settings & Themes</Text>
-                 <TouchableOpacity onPress={() => setShowSettings(false)} nativeID="close-settings-btn"><X color={activeTheme.text} size={28} /></TouchableOpacity>
+                 <TouchableOpacity onPress={() => setShowSettings(false)}><X color={activeTheme.text} size={28} /></TouchableOpacity>
               </View>
 
               <ScrollView showsVerticalScrollIndicator={false}>
@@ -250,7 +245,7 @@ export default function Lab() {
                 <Text style={[styles.settingsTitle, { color: activeTheme.subText, marginTop: 30 }]}>CHOOSE UNIVERSE</Text>
                 <View style={styles.themeGrid}>
                    {Object.entries(themes).map(([k, t]) => (
-                     <TouchableOpacity key={k} onPress={() => setTheme(k)} style={[styles.themeCard, { backgroundColor: t.bg, borderColor: themeKey === k ? t.accent : activeTheme.border }]} nativeID={`theme-option-${k}`}>
+                     <TouchableOpacity key={k} onPress={() => setTheme(k)} style={[styles.themeCard, { width: (SCREEN_WIDTH - 80) / 2, backgroundColor: t.bg, borderColor: themeKey === k ? t.accent : activeTheme.border }]}>
                         <View style={[styles.colorDot, { backgroundColor: t.accent }]} />
                         <Text style={[styles.themeLabel, { color: t.text }]}>{t.name}</Text>
                      </TouchableOpacity>
@@ -289,10 +284,10 @@ export default function Lab() {
 }
 
 const styles = StyleSheet.create({
-  scrollContent: { paddingBottom: 150 },
-  viewContainer: { padding: 24, paddingTop: 40 },
-  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  pageTitle: { fontSize: 28, fontWeight: '900' },
+  scrollContent: { paddingBottom: 120 },
+  viewContainer: { padding: 16, paddingTop: 24 },
+  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+  pageTitle: { fontSize: 22, fontWeight: '900' },
   iconBtn: { padding: 10, borderRadius: 12, borderWidth: 1 },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'flex-end' },
   settingsModal: { height: '80%', borderTopLeftRadius: 40, borderTopRightRadius: 40, padding: 30, borderWidth: 2 },
@@ -302,10 +297,10 @@ const styles = StyleSheet.create({
   avatarScroll: { flexDirection: 'row', marginBottom: 10 },
   avatarPill: { width: 70, height: 70, borderRadius: 35, marginRight: 12, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
   themeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  themeCard: { width: (SCREEN_WIDTH - 84) / 2, padding: 18, borderRadius: 20, borderWidth: 2, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  themeCard: { padding: 14, borderRadius: 20, borderWidth: 2, flexDirection: 'row', alignItems: 'center', gap: 10 },
   colorDot: { width: 14, height: 14, borderRadius: 7 },
   themeLabel: { fontSize: 13, fontWeight: 'bold' },
-  profileCard: { borderRadius: 32, padding: 25, marginBottom: 20 },
+  profileCard: { borderRadius: 24, padding: 18, marginBottom: 16 },
   profileHeader: { flexDirection: 'row', alignItems: 'center', gap: 15, marginBottom: 20 },
   avatarMain: { width: 70, height: 70, borderRadius: 35, justifyContent: 'center', alignItems: 'center' },
   avatarMainText: { fontSize: 36 },

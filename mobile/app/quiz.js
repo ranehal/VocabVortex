@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
 import { MotiView, AnimatePresence } from 'moti';
-import { useApp } from './_layout';
+import { useApp, authFetch } from './_layout';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { X, Check, ArrowRight, Award, Sparkles, AlertCircle } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -61,7 +61,7 @@ export default function Quiz() {
     const optionsPool = ["Tough", "Fluent", "Short-lived", "Bright", "Ruler", "Clever", "Huge", "Quick", "Happy", "Sad", "Careful", "Practical", "Luck", "Swift", "Brave"];
     
     try {
-      const res = await fetch(`${API_BASE}/api/words/details`, {
+      const res = await authFetch(`${API_BASE}/api/words/details`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ words: shuffledPool })
@@ -132,11 +132,11 @@ export default function Quiz() {
       const name = await AsyncStorage.getItem('userName') || 'Explorer';
       const avatar = await AsyncStorage.getItem('vortex_avatar') || '🚀';
       
-      await fetch(`${API_BASE}/api/user/xp`, {
+      await authFetch(`${API_BASE}/api/user/xp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          email, 
+        body: JSON.stringify({
+          email,
           xpToAdd: score,
           name,
           picture: avatar

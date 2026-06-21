@@ -1,207 +1,438 @@
-import { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
-import { MotiView } from 'moti';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import {
+  View, Text, TextInput, TouchableOpacity, StyleSheet,
+  ScrollView, ActivityIndicator, Alert,
+} from 'react-native';
 import { useApp } from '../_layout';
-import { CheckCircle2, RotateCw } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import LoadingSpinner from '../../components/LoadingSpinner';
-import { BASE_URL } from '../../constants';
 
-const READFLOW_STORE_KEY = 'readflow_mobile_v1';
+// ── Storage keys ──────────────────────────────────────────────────────────────
+const READER_KEY = 'readflow_reader_v1';
+const QUEUE_KEY = 'readflow_discovery_queue_v1';
 
-const parseReadFlowText = (raw) => {
+// ── Hardcoded books ───────────────────────────────────────────────────────────
+const READFLOW_BOOKS = [
+  {
+    _id: 'alchemist',
+    title: 'The Alchemist',
+    coverEmoji: '📘',
+    chapters: [
+      { _id: 'ch1', title: 'Chapter 1 — The Shepherd', text: "THE BOY'S NAME WAS (ছেলেটির নাম ছিল) SANTIAGO. DUSK was falling (সন্ধ্যা নামছিল), and he arrived (এবং সে পৌঁছাল) with his herd (তার পশুপাল নিয়ে) at an abandoned church (একটি পরিত্যক্ত গির্জায়). The roof had fallen in (ছাদ ভেঙে পড়েছিল), and an enormous sycamore had grown (এবং একটি বিশাল ডুমুর গাছ জন্মেছিল) on the spot (সেই জায়গায়) where the sacristy had once stood (যেখানে একসময় পবিত্র কক্ষ ছিল)." },
+      { _id: 'ch2', title: 'Chapter 2 — The Dream', text: "He had learned (সে শিখেছিল) that the world was full of signs (পৃথিবী সংকেতে পূর্ণ), but people often ignored them (কিন্তু মানুষ প্রায়ই সেগুলো উপেক্ষা করে). The boy fell asleep (ছেলেটি ঘুমিয়ে পড়ল) and dreamed (এবং স্বপ্ন দেখল) once again (আবারও) about the treasure (ধনের কথা). He saw the same child (সে একই শিশুকে দেখল) and the Egyptian pyramids (এবং মিশরীয় পিরামিড)." },
+      { _id: 'ch3', title: 'Chapter 3 — The Old King', text: "The old man (বৃদ্ধ লোকটি) said his name was Melchizedek (বলল তার নাম মেলকিজেডেক) and that he was the king of Salem (এবং সে সালেমের রাজা). Everyone (প্রত্যেকে) at some point in their lives (জীবনের কোনো এক সময়) discovers their Personal Legend (তাদের ব্যক্তিগত কিংবদন্তি আবিষ্কার করে). When you want something (যখন তুমি কিছু চাও), all the universe conspires (সমগ্র মহাবিশ্ব ষড়যন্ত্র করে) in helping you to achieve it (তোমাকে তা অর্জনে সাহায্য করতে)." },
+      { _id: 'ch4', title: 'Chapter 4 — The Desert', text: "The desert (মরুভূমি) is a capricious (খামখেয়ালি) and dangerous place (এবং বিপজ্জনক জায়গা). Every stone (প্রতিটি পাথর) and every grain of sand (এবং প্রতিটি বালিকণা) was speaking to him (তার সাথে কথা বলছিল). He understood (সে বুঝল) that the Soul of the World (বিশ্বের আত্মা) was nourishing him (তাকে পুষ্টি দিচ্ছিল) because it was also his dream (কারণ এটাও তার স্বপ্ন ছিল)." },
+    ],
+  },
+  {
+    _id: 'easy',
+    title: 'Easy English',
+    coverEmoji: '📗',
+    chapters: [
+      { _id: 'e1', title: 'A Simple Morning', text: "I wake up early (আমি সকালে তাড়াতাড়ি উঠি). I drink water (আমি পানি পান করি). Then I go to school (তারপর আমি স্কুলে যাই). My teacher is kind (আমার শিক্ষক দয়ালু). I like to read (আমি পড়তে পছন্দ করি) and learn new words (এবং নতুন শব্দ শিখতে)." },
+      { _id: 'e2', title: 'At the Market', text: "The market is busy (বাজার ব্যস্ত). People are buying (মানুষজন কিনছে) fruits and vegetables (ফল এবং সবজি). The seller is shouting (বিক্রেতা চিৎকার করছে). My mother picks the best ones (আমার মা সবচেয়ে ভালোগুলো বেছে নেন). We carry the bags (আমরা ব্যাগগুলো বহন করি) and walk back home (এবং বাড়ি ফিরে হাঁটি)." },
+    ],
+  },
+  {
+    _id: 'proverbs',
+    title: 'English Proverbs',
+    coverEmoji: '📙',
+    chapters: [
+      { _id: 'p1', title: 'Wisdom & Life', text: "Actions speak (কাজই বলে) louder than words (কথার চেয়ে জোরে). Every cloud (প্রতিটি মেঘের) has a silver lining (একটি রুপালি আস্তরণ আছে). Time and tide (সময় এবং জোয়ার) wait for no man (কারো জন্য অপেক্ষা করে না). Knowledge is power (জ্ঞানই শক্তি). The early bird (ভোরের পাখি) catches the worm (কীট ধরে)." },
+      { _id: 'p2', title: 'Success & Failure', text: "No pain (কোনো কষ্ট নেই), no gain (কোনো লাভ নেই). Practice makes (অনুশীলন করে) a man perfect (মানুষকে নিখুঁত). Fortune favors (ভাগ্য পক্ষপাত করে) the brave (সাহসীদের). Look before (দেখো আগে) you leap (তুমি লাফ দেওয়ার). Better late (দেরি হওয়া ভালো) than never (না আসার চেয়ে)." },
+    ],
+  },
+];
+
+// ── Parse annotated text: "English (Bengali)" → chunks ───────────────────────
+function parseText(raw) {
   const chunks = [];
   const regex = /([^()]+?)\(([^)]+)\)/g;
-  let last = 0;
-  let match;
+  let last = 0, match;
   while ((match = regex.exec(raw)) !== null) {
     if (match.index > last) chunks.push({ en: raw.slice(last, match.index), bn: null });
-    chunks.push({ en: match[1], bn: match[2].trim() });
+    chunks.push({ en: match[1].trim(), bn: match[2].trim() });
     last = match.index + match[0].length;
   }
   if (last < raw.length) chunks.push({ en: raw.slice(last), bn: null });
   return chunks;
-};
+}
 
-export default function ReadFlow() {
-  const { activeTheme, handleTapWord } = useApp();
-  const [rawText, setRawText] = useState('');
-  const [chunks, setChunks] = useState([]);
-  const [queue, setQueue] = useState([]);
+// ── Meaning Discovery queue helpers ──────────────────────────────────────────
+async function loadQueue() {
+  try {
+    const raw = await AsyncStorage.getItem(QUEUE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch { return []; }
+}
+
+async function saveQueue(q) {
+  await AsyncStorage.setItem(QUEUE_KEY, JSON.stringify(q));
+}
+
+function shuffleArr(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+// ── BOOK READER ───────────────────────────────────────────────────────────────
+function BookReader({ activeTheme, chapter, onBack, onAddToQueue }) {
   const [fontSize, setFontSize] = useState(17);
-  const [revealedChunk, setRevealedChunk] = useState(null);
-  const [books, setBooks] = useState([]);
-  const [selectedBook, setSelectedBook] = useState(null);
-  const [selectedChapter, setSelectedChapter] = useState(null);
-  const [loadingBooks, setLoadingBooks] = useState(false);
+  const [revealed, setRevealed] = useState(null);
+  const chunks = useMemo(() => parseText(chapter.text), [chapter.text]);
 
-  useEffect(() => {
-    loadReadFlow();
-    loadBooks();
-  }, []);
-
-  const loadReadFlow = async () => {
-    try {
-      const saved = await AsyncStorage.getItem(READFLOW_STORE_KEY);
-      if (!saved) return;
-      const parsed = JSON.parse(saved);
-      setRawText(parsed.rawText || '');
-      setChunks(parsed.chunks || []);
-      setQueue(parsed.queue || []);
-      setFontSize(parsed.fontSize || 17);
-    } catch (e) { }
-  };
-
-  const loadBooks = async () => {
-    setLoadingBooks(true);
-    try {
-      const res = await fetch(`${BASE_URL}/api/books`);
-      const data = await res.json();
-      if (res.ok) setBooks(data);
-    } catch (e) { } finally { setLoadingBooks(false); }
-  };
-
-  const persistReadFlow = async (nextState) => {
-    try {
-      await AsyncStorage.setItem(READFLOW_STORE_KEY, JSON.stringify({ rawText, chunks, queue, fontSize, ...nextState }));
-    } catch (e) { }
-  };
-
-  const loadText = () => {
-    const clean = rawText.trim();
-    if (!clean) return;
-    const parsedChunks = parseReadFlowText(clean);
-    setChunks(parsedChunks);
-    persistReadFlow({ rawText: clean, chunks: parsedChunks });
-  };
-
-  const loadChapterText = async () => {
-    if (!selectedBook || !selectedChapter) return;
-    try {
-      const res = await fetch(`${BASE_URL}/api/books/${selectedBook._id}/chapters/${selectedChapter._id}`);
-      const data = await res.json();
-      if (res.ok && data.text) {
-        setRawText(data.text);
-        const parsed = parseReadFlowText(data.text);
-        setChunks(parsed);
-        persistReadFlow({ rawText: data.text, chunks: parsed });
-      }
-    } catch (e) { }
-  };
-
-  const clearText = () => {
-    setRawText('');
-    setChunks([]);
-    persistReadFlow({ rawText: '', chunks: [] });
-  };
-
-  const addToQueue = (chunk, index) => {
+  const tapChunk = (chunk, idx) => {
     if (!chunk.bn) return;
-    setRevealedChunk(index);
-    setTimeout(() => setRevealedChunk(null), 5000);
-    const item = { id: `${Date.now()}-${Math.random()}`, en: chunk.en.trim(), bn: chunk.bn };
-    const nextQueue = [...queue, item];
-    setQueue(nextQueue);
-    persistReadFlow({ queue: nextQueue });
+    setRevealed(idx);
+    setTimeout(() => setRevealed(null), 4000);
+    onAddToQueue({ id: `${chunk.en.trim()}-${Date.now()}`, en: chunk.en.trim(), bn: chunk.bn });
   };
 
   return (
-    <ScrollView contentContainerStyle={[styles.scrollContent, { backgroundColor: activeTheme.bg }]} showsVerticalScrollIndicator={false}>
-      <MotiView from={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} style={styles.viewContainer}>
-        <View style={[styles.card, { backgroundColor: activeTheme.card, borderColor: activeTheme.border, borderWidth: 1 }]}>
-          <Text style={[styles.title, { color: activeTheme.accent }]}>READFLOW</Text>
-          <View style={styles.fontBox}>
-            <TouchableOpacity onPress={() => setFontSize(s => Math.max(12, s-1))} style={[styles.fontBtn, { borderColor: activeTheme.border, backgroundColor: activeTheme.bg }]}><Text style={{ color: activeTheme.text }}>−</Text></TouchableOpacity>
-            <Text style={{ color: activeTheme.text, fontWeight: 'bold' }}>{fontSize}</Text>
-            <TouchableOpacity onPress={() => setFontSize(s => Math.min(34, s+1))} style={[styles.fontBtn, { borderColor: activeTheme.border, backgroundColor: activeTheme.bg }]}><Text style={{ color: activeTheme.text }}>+</Text></TouchableOpacity>
-          </View>
-          
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.pillScroll}>
-            {books.map(b => (
-              <TouchableOpacity key={b._id} onPress={() => { setSelectedBook(b); setSelectedChapter(null); }} style={[styles.pill, { backgroundColor: selectedBook?._id === b._id ? activeTheme.accent : activeTheme.bg, borderColor: activeTheme.border, borderWidth: 1 }]}>
-                <Text style={{ color: selectedBook?._id === b._id ? '#fff' : activeTheme.text }}>{b.title}</Text>
+    <View style={{ flex: 1, backgroundColor: activeTheme.bg }}>
+      {/* Header */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', padding: 16, paddingTop: 20, gap: 12, borderBottomWidth: 1, borderBottomColor: activeTheme.border }}>
+        <TouchableOpacity onPress={onBack} style={{ padding: 8, backgroundColor: activeTheme.card, borderRadius: 10 }}>
+          <Text style={{ color: activeTheme.text, fontSize: 18 }}>←</Text>
+        </TouchableOpacity>
+        <Text style={{ color: activeTheme.text, fontWeight: '700', fontSize: 15, flex: 1 }} numberOfLines={1}>{chapter.title}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <TouchableOpacity onPress={() => setFontSize(f => Math.max(12, f - 1))} style={[s.fontBtn, { backgroundColor: activeTheme.card, borderColor: activeTheme.border }]}>
+            <Text style={{ color: activeTheme.text }}>A−</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setFontSize(f => Math.min(30, f + 1))} style={[s.fontBtn, { backgroundColor: activeTheme.card, borderColor: activeTheme.border }]}>
+            <Text style={{ color: activeTheme.text }}>A+</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <View style={{ backgroundColor: activeTheme.card, marginHorizontal: 16, marginTop: 10, borderRadius: 10, padding: 10, borderWidth: 1, borderColor: activeTheme.border }}>
+        <Text style={{ color: activeTheme.accent, fontSize: 11, fontWeight: '700' }}>💡 Bold phrase ট্যাপ করুন → Bengali অর্থ দেখুন + Discovery Queue-এ যাবে</Text>
+      </View>
+
+      <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 120 }}>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+          {chunks.map((chunk, i) => {
+            if (!chunk.bn) return <Text key={i} style={{ fontSize, color: activeTheme.text, lineHeight: fontSize * 1.7 }}>{chunk.en}</Text>;
+            return (
+              <TouchableOpacity key={i} onPress={() => tapChunk(chunk, i)} activeOpacity={0.7}>
+                <Text style={{ fontSize, color: activeTheme.accent, lineHeight: fontSize * 1.7, fontWeight: '700' }}>
+                  {chunk.en}
+                  {revealed === i && <Text style={{ color: activeTheme.text, fontWeight: '400' }}> ({chunk.bn})</Text>}
+                  {' '}
+                </Text>
               </TouchableOpacity>
-            ))}
-          </ScrollView>
+            );
+          })}
+        </View>
+      </ScrollView>
+    </View>
+  );
+}
 
-          {selectedBook && (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.pillScroll}>
-              {selectedBook.chapters.map(c => (
-                <TouchableOpacity key={c._id} onPress={() => setSelectedChapter(c)} style={[styles.pill, { backgroundColor: selectedChapter?._id === c._id ? activeTheme.accent : activeTheme.bg, borderColor: activeTheme.border, borderWidth: 1 }]}>
-                  <Text style={{ color: selectedChapter?._id === c._id ? '#fff' : activeTheme.text }}>{c.title}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          )}
+// ── BOOKS TAB ─────────────────────────────────────────────────────────────────
+function BooksTab({ activeTheme, onAddToQueue }) {
+  const [selectedBook, setSelectedBook] = useState(null);
+  const [selectedChapter, setSelectedChapter] = useState(null);
 
-          <TouchableOpacity onPress={loadChapterText} style={[styles.primaryBtn, { backgroundColor: activeTheme.accent }]}><Text style={styles.btnText}>LOAD CONTENT</Text></TouchableOpacity>
-          
-          <TextInput
-            style={[styles.input, { color: activeTheme.text, backgroundColor: activeTheme.bg, borderColor: activeTheme.border, borderWidth: 1, marginTop: 15 }]}
-            multiline
-            placeholder="Or paste text manually..."
-            placeholderTextColor={activeTheme.subText}
-            value={rawText}
-            onChangeText={setRawText}
-          />
-          <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
-            <TouchableOpacity onPress={loadText} style={[styles.primaryBtn, { backgroundColor: activeTheme.accent, flex: 1 }]}><Text style={styles.btnText}>LOAD MANUAL</Text></TouchableOpacity>
-            <TouchableOpacity onPress={clearText} style={[styles.ghostBtn, { borderColor: activeTheme.border, backgroundColor: activeTheme.bg }]}><Text style={{ color: activeTheme.text }}>CLEAR</Text></TouchableOpacity>
+  if (selectedChapter) {
+    return <BookReader activeTheme={activeTheme} chapter={selectedChapter} onBack={() => setSelectedChapter(null)} onAddToQueue={onAddToQueue} />;
+  }
+
+  return (
+    <ScrollView style={{ flex: 1, backgroundColor: activeTheme.bg }} contentContainerStyle={{ padding: 16, paddingBottom: 120, gap: 14 }}>
+
+      {!selectedBook ? (
+        <>
+          <Text style={[s.sectionLabel, { color: activeTheme.subText }]}>📖 ইংরেজি বই</Text>
+          {READFLOW_BOOKS.map(book => (
+            <TouchableOpacity key={book._id} onPress={() => setSelectedBook(book)} activeOpacity={0.85}
+              style={[s.bookCard, { backgroundColor: activeTheme.card, borderColor: activeTheme.border }]}>
+              <View style={[s.coverCircle, { backgroundColor: activeTheme.bg }]}>
+                <Text style={{ fontSize: 30 }}>{book.coverEmoji}</Text>
+              </View>
+              <View style={{ flex: 1, gap: 4 }}>
+                <Text style={{ color: activeTheme.text, fontSize: 16, fontWeight: '700' }}>{book.title}</Text>
+                <Text style={{ color: activeTheme.subText, fontSize: 13 }}>{book.chapters.length} chapters</Text>
+                <Text style={{ color: activeTheme.accent, fontSize: 12, fontWeight: '600' }}>✓ Owned</Text>
+              </View>
+              <Text style={{ color: activeTheme.subText, fontSize: 22 }}>›</Text>
+            </TouchableOpacity>
+          ))}
+        </>
+      ) : (
+        <>
+          <TouchableOpacity onPress={() => setSelectedBook(null)} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+            <Text style={{ color: activeTheme.accent, fontSize: 15, fontWeight: '700' }}>← Back</Text>
+          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+            <Text style={{ fontSize: 28 }}>{selectedBook.coverEmoji}</Text>
+            <Text style={{ color: activeTheme.text, fontSize: 18, fontWeight: '800' }}>{selectedBook.title}</Text>
           </View>
-        </View>
-
-        <View style={[styles.card, { backgroundColor: activeTheme.card, borderColor: activeTheme.border, borderWidth: 1 }]}>
-          <Text style={[styles.sectionLabel, { color: activeTheme.subText }]}>READING AREA</Text>
-          <View style={styles.readingArea}>
-            {chunks.map((c, i) => {
-               if (!c.bn) return <Text key={i} style={{ fontSize, color: activeTheme.text, lineHeight: fontSize * 1.6 }}>{c.en}</Text>;
-               return (
-                <TouchableOpacity key={i} onPress={() => addToQueue(c, i)}>
-                  <Text style={{ fontSize, color: activeTheme.text, lineHeight: fontSize * 1.6, fontWeight: '700' }}>
-                    {c.en}
-                    {revealedChunk === i && <Text style={{ color: activeTheme.accent }}> ({c.bn})</Text>}
-                    {' '}
-                  </Text>
-                </TouchableOpacity>
-               );
-            })}
-          </View>
-        </View>
-
-        <View style={[styles.card, { backgroundColor: activeTheme.card, borderColor: activeTheme.border, borderWidth: 1 }]}>
-           <Text style={[styles.sectionLabel, { color: activeTheme.subText }]}>DISCOVERY QUEUE ({queue.length})</Text>
-           {queue.map(item => (
-             <View key={item.id} style={[styles.queueItem, { backgroundColor: activeTheme.bg, borderColor: activeTheme.border, borderWidth: 1 }]}>
-               <View style={{ flex: 1 }}>
-                 {item.en.split(' ').map((w, idx) => (
-                    <TouchableOpacity key={idx} onPress={() => handleTapWord(w)} style={{ display: 'inline' }}>
-                      <Text style={{ color: activeTheme.text, fontWeight: '700' }}>{w} </Text>
-                    </TouchableOpacity>
-                 ))}
-               </View>
-               <Text style={{ color: activeTheme.accent, fontWeight: 'bold' }}>{item.bn}</Text>
-             </View>
-           ))}
-        </View>
-      </MotiView>
+          <Text style={[s.sectionLabel, { color: activeTheme.subText, marginBottom: 4 }]}>CHAPTERS</Text>
+          {selectedBook.chapters.map(ch => (
+            <TouchableOpacity key={ch._id} onPress={() => setSelectedChapter(ch)} activeOpacity={0.85}
+              style={[s.chapterCard, { backgroundColor: activeTheme.card, borderColor: activeTheme.border }]}>
+              <Text style={{ color: activeTheme.text, fontSize: 15, fontWeight: '600', flex: 1 }}>{ch.title}</Text>
+              <Text style={{ color: activeTheme.subText, fontSize: 20 }}>›</Text>
+            </TouchableOpacity>
+          ))}
+        </>
+      )}
     </ScrollView>
   );
 }
 
-const styles = StyleSheet.create({
-  scrollContent: { paddingBottom: 150 },
-  viewContainer: { padding: 24, paddingTop: 60 },
-  card: { borderRadius: 32, padding: 25, marginBottom: 20 },
-  title: { fontSize: 24, fontWeight: '900', marginBottom: 15 },
-  fontBox: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 20 },
-  fontBtn: { width: 30, height: 30, borderRadius: 8, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-  pillScroll: { marginBottom: 10 },
-  pill: { paddingHorizontal: 15, paddingVertical: 8, borderRadius: 20, marginRight: 8 },
-  primaryBtn: { height: 50, borderRadius: 15, justifyContent: 'center', alignItems: 'center' },
-  ghostBtn: { height: 50, borderRadius: 15, borderWidth: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 },
-  btnText: { color: '#fff', fontWeight: 'bold' },
-  input: { minHeight: 100, borderRadius: 15, padding: 15, textAlignVertical: 'top' },
-  sectionLabel: { fontSize: 10, fontWeight: '900', opacity: 0.5, marginBottom: 15, letterSpacing: 1 },
-  readingArea: { flexDirection: 'row', flexWrap: 'wrap' },
-  queueItem: { flexDirection: 'row', padding: 15, borderRadius: 20, marginBottom: 10, alignItems: 'center' }
+// ── MEANING DISCOVERY TAB ─────────────────────────────────────────────────────
+const ROUND_SIZE = 5;
+
+function MeaningDiscoveryTab({ activeTheme, queue, onQueueUpdate }) {
+  const roundItems = useMemo(() => queue.slice(0, ROUND_SIZE), [queue]);
+  const shuffledBn = useMemo(() => shuffleArr(roundItems.map(r => r.id)), [roundItems]);
+
+  const [pairs, setPairs] = useState({});       // engId → benId
+  const [selectedEng, setSelectedEng] = useState(null);
+  const [verified, setVerified] = useState(false);
+  const [taint, setTaint] = useState(new Set());
+  const [earnedPoints, setEarnedPoints] = useState(0);
+  const [removing, setRemoving] = useState(false);
+
+  // Reverse map: benId → engId
+  const engByBn = useMemo(() => {
+    const m = {};
+    Object.entries(pairs).forEach(([eng, ben]) => { m[ben] = eng; });
+    return m;
+  }, [pairs]);
+
+  const allPaired = roundItems.length > 0 && roundItems.every(it => pairs[it.id] !== undefined);
+  const engNumber = useCallback(engId => roundItems.findIndex(r => r.id === engId) + 1, [roundItems]);
+
+  const handleEngTap = (engId) => {
+    if (verified) return;
+    setSelectedEng(prev => prev === engId ? null : engId);
+  };
+
+  const handleBnTap = (benId) => {
+    if (verified || selectedEng === null) return;
+    setPairs(prev => {
+      const next = { ...prev };
+      for (const e of Object.keys(next)) if (next[e] === benId) delete next[e];
+      next[selectedEng] = benId;
+      return next;
+    });
+    setSelectedEng(null);
+  };
+
+  const handleVerify = () => {
+    if (!allPaired || verified) return;
+    const wrongIds = roundItems.filter(it => pairs[it.id] !== it.id).map(it => it.id);
+    const correctIds = roundItems.filter(it => pairs[it.id] === it.id).map(it => it.id);
+    let gained = 0;
+    correctIds.forEach(id => { if (!taint.has(id)) gained += 0.5; });
+    if (gained > 0) setEarnedPoints(p => p + gained);
+    if (wrongIds.length) setTaint(prev => new Set([...prev, ...wrongIds]));
+    setVerified(true);
+  };
+
+  const handleNextRound = async () => {
+    setRemoving(true);
+    const correctIds = roundItems.filter(it => pairs[it.id] === it.id).map(it => it.id);
+    const updated = queue.filter(it => !correctIds.includes(it.id));
+    await saveQueue(updated);
+    onQueueUpdate(updated);
+    setPairs({}); setSelectedEng(null); setVerified(false);
+    setRemoving(false);
+  };
+
+  const totalRounds = queue.length > 0 ? Math.ceil(queue.length / ROUND_SIZE) : 0;
+  const allCorrect = verified && roundItems.every(it => pairs[it.id] === it.id);
+  const isLastRound = queue.length <= roundItems.length;
+
+  if (queue.length === 0) {
+    return (
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40, backgroundColor: activeTheme.bg, gap: 12 }}>
+        <Text style={{ fontSize: 40, opacity: 0.4 }}>✦</Text>
+        <Text style={{ fontSize: 16, fontWeight: '700', color: activeTheme.text }}>Meaning Discovery</Text>
+        <Text style={{ fontSize: 13, color: activeTheme.subText, textAlign: 'center', lineHeight: 22 }}>
+          Books tab-এ বই পড়তে পড়তে bold phrase ট্যাপ করুন — এখানে জমা হবে।
+        </Text>
+      </View>
+    );
+  }
+
+  return (
+    <View style={{ flex: 1, backgroundColor: activeTheme.bg }}>
+      {/* Header */}
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: activeTheme.card, borderBottomWidth: 1, borderBottomColor: activeTheme.border }}>
+        <View>
+          <Text style={{ fontSize: 10, fontWeight: '900', letterSpacing: 1.6, color: activeTheme.subText }}>MEANING DISCOVERY</Text>
+          <Text style={{ fontSize: 12, color: activeTheme.accent, fontWeight: '700', marginTop: 2 }}>{queue.length} বাকি · {totalRounds} round</Text>
+        </View>
+        <View style={{ backgroundColor: activeTheme.bg, borderWidth: 1, borderColor: activeTheme.border, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 4 }}>
+          <Text style={{ fontSize: 12, color: activeTheme.text, fontWeight: '700' }}>{queue.length}</Text>
+        </View>
+      </View>
+
+      <Text style={{ fontSize: 12, color: activeTheme.subText, textAlign: 'center', paddingVertical: 8, fontStyle: 'italic' }}>
+        প্রতিটি English-এর সাথে Bengali মিলান, তারপর যাচাই করুন
+      </Text>
+
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 120 }}>
+        {/* Matching grid */}
+        <View style={{ flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingTop: 4 }}>
+          {/* English column */}
+          <View style={{ flex: 1, gap: 8 }}>
+            {roundItems.map(item => {
+              const paired = pairs[item.id];
+              const isSelected = selectedEng === item.id;
+              const correct = pairs[item.id] === item.id;
+              const num = paired ? engNumber(item.id) : null;
+              return (
+                <TouchableOpacity key={`en-${item.id}`}
+                  style={[s.matchChip, { backgroundColor: activeTheme.card, borderColor: activeTheme.border },
+                    !verified && isSelected && s.chipSelected,
+                    !verified && paired && !isSelected && s.chipPaired,
+                    verified && (correct ? s.chipMatched : s.chipWrong),
+                  ]}
+                  onPress={() => handleEngTap(item.id)} disabled={verified} activeOpacity={0.75}>
+                  {num ? <View style={s.pairNumBadge}><Text style={s.pairNumText}>{num}</Text></View> : null}
+                  <Text style={{ fontSize: 14, color: activeTheme.text, fontWeight: '600', textAlign: 'center' }}>{item.en}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          {/* Bengali column (shuffled) */}
+          <View style={{ flex: 1, gap: 8 }}>
+            {shuffledBn.map(benId => {
+              const item = roundItems.find(r => r.id === benId);
+              const pairedEng = engByBn[benId];
+              const correct = pairedEng === benId;
+              const num = pairedEng ? engNumber(pairedEng) : null;
+              return (
+                <TouchableOpacity key={`bn-${benId}`}
+                  style={[s.matchChip, { backgroundColor: activeTheme.card, borderColor: activeTheme.border, opacity: 0.9 },
+                    !verified && pairedEng && s.chipPaired,
+                    verified && pairedEng && (correct ? s.chipMatched : s.chipWrong),
+                  ]}
+                  onPress={() => handleBnTap(benId)} disabled={verified || selectedEng === null} activeOpacity={0.75}>
+                  {num ? <View style={s.pairNumBadge}><Text style={s.pairNumText}>{num}</Text></View> : null}
+                  <Text style={{ fontSize: 14, color: activeTheme.subText, fontWeight: '600', textAlign: 'center' }}>{item?.bn}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+
+        {/* Verify / Next */}
+        <View style={{ padding: 16, gap: 12 }}>
+          {!verified ? (
+            <TouchableOpacity
+              style={[s.primaryBtn, { backgroundColor: activeTheme.accent, opacity: allPaired ? 1 : 0.45 }]}
+              onPress={handleVerify} disabled={!allPaired}>
+              <Text style={s.primaryBtnText}>যাচাই করুন</Text>
+            </TouchableOpacity>
+          ) : (
+            <View style={[s.resultBox, { backgroundColor: activeTheme.card, borderColor: activeTheme.border }]}>
+              <Text style={{ fontSize: 16, fontWeight: '700', color: activeTheme.text, textAlign: 'center' }}>
+                {allCorrect ? '🎉 সব সঠিক!' : '❌ কিছু ভুল হয়েছে — ভুলগুলো আবার আসবে।'}
+              </Text>
+              <Text style={{ fontSize: 13, fontWeight: '700', color: activeTheme.accent, textAlign: 'center' }}>
+                অর্জিত পয়েন্ট: +{earnedPoints.toFixed(1)}
+              </Text>
+              <TouchableOpacity
+                style={[s.primaryBtn, { backgroundColor: activeTheme.accent, opacity: removing ? 0.5 : 1 }]}
+                onPress={handleNextRound} disabled={removing}>
+                {removing
+                  ? <ActivityIndicator color="#fff" size="small" />
+                  : <Text style={s.primaryBtnText}>{allCorrect && isLastRound ? 'সম্পন্ন করুন ✓' : 'পরবর্তী রাউন্ড →'}</Text>}
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+      </ScrollView>
+    </View>
+  );
+}
+
+// ── MAIN READFLOW SCREEN ──────────────────────────────────────────────────────
+export default function ReadFlow() {
+  const { activeTheme } = useApp();
+  const [activeTab, setActiveTab] = useState('books');
+  const [queue, setQueue] = useState([]);
+
+  useEffect(() => {
+    loadQueue().then(setQueue);
+  }, []);
+
+  const handleAddToQueue = useCallback(async (item) => {
+    setQueue(prev => {
+      if (prev.some(q => q.en === item.en)) return prev;
+      const updated = [...prev, item];
+      saveQueue(updated);
+      return updated;
+    });
+  }, []);
+
+  const TABS = [
+    { key: 'books', label: 'Books' },
+    { key: 'meaning', label: `Meaning Discovery${queue.length ? ` (${queue.length})` : ''}` },
+  ];
+
+  return (
+    <View style={{ flex: 1, backgroundColor: activeTheme.bg }}>
+      {/* Tab bar */}
+      <View style={{ flexDirection: 'row', backgroundColor: activeTheme.card, borderBottomWidth: 1, borderBottomColor: activeTheme.border }}>
+        {TABS.map(tab => (
+          <TouchableOpacity key={tab.key} onPress={() => setActiveTab(tab.key)} activeOpacity={0.8}
+            style={{ flex: 1, paddingVertical: 14, alignItems: 'center', borderBottomWidth: 3, borderBottomColor: activeTab === tab.key ? activeTheme.accent : 'transparent' }}>
+            <Text style={{ fontSize: 13, fontWeight: activeTab === tab.key ? '700' : '600', color: activeTab === tab.key ? activeTheme.accent : activeTheme.subText }}>
+              {tab.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {/* Content */}
+      {activeTab === 'books'
+        ? <BooksTab activeTheme={activeTheme} onAddToQueue={handleAddToQueue} />
+        : <MeaningDiscoveryTab activeTheme={activeTheme} queue={queue} onQueueUpdate={setQueue} />}
+    </View>
+  );
+}
+
+// ── Shared styles ─────────────────────────────────────────────────────────────
+const s = StyleSheet.create({
+  sectionLabel: { fontSize: 10, fontWeight: '900', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8 },
+  primaryBtn: { borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
+  primaryBtnText: { color: '#fff', fontWeight: '700', fontSize: 15 },
+
+  bookCard: { flexDirection: 'row', alignItems: 'center', borderRadius: 16, padding: 14, gap: 12, borderWidth: 1 },
+  coverCircle: { width: 56, height: 56, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  chapterCard: { flexDirection: 'row', alignItems: 'center', borderRadius: 12, padding: 16, borderWidth: 1, gap: 10 },
+
+  fontBtn: { borderWidth: 1, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5 },
+
+  matchChip: {
+    borderWidth: 1.5, borderRadius: 12,
+    paddingVertical: 10, paddingHorizontal: 10,
+    minHeight: 52, justifyContent: 'center', alignItems: 'center',
+    elevation: 1, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 2,
+  },
+  chipSelected: { borderColor: '#2D6A4F', backgroundColor: '#E8F5EE' },
+  chipPaired: { borderColor: '#52B788', backgroundColor: '#EEF6F1' },
+  chipMatched: { borderColor: '#2D6A4F', backgroundColor: '#D4EDDA' },
+  chipWrong: { borderColor: '#dc2626', backgroundColor: '#FDECEA' },
+
+  pairNumBadge: {
+    position: 'absolute', top: 4, left: 4,
+    width: 18, height: 18, borderRadius: 9,
+    backgroundColor: '#2D6A4F', alignItems: 'center', justifyContent: 'center',
+  },
+  pairNumText: { fontSize: 10, color: '#fff', fontWeight: '800' },
+
+  resultBox: { borderRadius: 16, padding: 20, gap: 10, alignItems: 'center', borderWidth: 1 },
 });

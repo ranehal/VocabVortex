@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import { MotiView } from 'moti';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useApp } from './_layout';
+import { useApp, authFetch } from './_layout';
 import { Volume2, Bookmark, RotateCw, ChevronLeft } from 'lucide-react-native';
 import * as Speech from 'expo-speech';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -30,7 +30,7 @@ export default function Reading() {
   const fetchStory = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${BASE_URL}/api/word`, {
+      const response = await authFetch(`${BASE_URL}/api/word`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -121,16 +121,16 @@ export default function Reading() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  viewContainer: { padding: 24, paddingTop: 60 },
+  viewContainer: { padding: 16, paddingTop: 32 },
   backBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 10 },
-  resultStack: { gap: 20 },
-  dictionaryHeader: { borderRadius: 32, padding: 32 },
+  resultStack: { gap: 16 },
+  dictionaryHeader: { borderRadius: 24, padding: 20 },
   dictTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
-  dictWord: { fontSize: 40, fontWeight: '900', letterSpacing: -1 },
+  dictWord: { fontSize: 28, fontWeight: '900', letterSpacing: -1, flexShrink: 1 },
   speakerBtn: { padding: 8, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 12 },
-  dictPhonetic: { fontSize: 14, fontWeight: '700', marginBottom: 20 },
-  dictBengali: { fontSize: 32, fontWeight: '900' },
-  storySection: { borderRadius: 32, padding: 32 },
+  dictPhonetic: { fontSize: 13, fontWeight: '700', marginBottom: 12 },
+  dictBengali: { fontSize: 22, fontWeight: '900' },
+  storySection: { borderRadius: 24, padding: 20 },
   sectionLabelText: { fontSize: 10, fontWeight: '900', opacity: 0.5, marginBottom: 15, letterSpacing: 1 },
   wordFlow: { fontSize: 20, lineHeight: 32 },
   flowWord: {},

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, KeyboardAvoidingView, Platform, Dimensions, RefreshControl, Alert } from 'react-native';
 import { MotiView, AnimatePresence } from 'moti';
-import { useApp } from '../_layout';
+import { useApp, authFetch } from '../_layout';
 import { Sparkles, Save, Trash2, Check, Wand2, Type, Highlighter, Languages, Zap, FileText, ChevronLeft, Plus, Cloud, CloudOff, Clock, Hash, AlignLeft, Volume2, VolumeX } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Speech from 'expo-speech';
@@ -48,9 +48,7 @@ export default function Notes() {
   const fetchNotes = async () => {
     setIsSyncing(true);
     try {
-      const res = await fetch(`${BASE_URL}/api/notes?email=${userEmail}`, {
-        headers: { 'Authorization': 'Bearer DUMMY_TEST_TOKEN_LONG_ENOUGH' }
-      });
+      const res = await authFetch(`${BASE_URL}/api/notes?email=${userEmail}`);
       const data = await res.json();
       if (Array.isArray(data)) {
         setNotes(data);
@@ -68,12 +66,9 @@ export default function Notes() {
 
   const syncNoteToServer = async (noteData) => {
     try {
-      const res = await fetch(`${BASE_URL}/api/notes`, {
+      const res = await authFetch(`${BASE_URL}/api/notes`, {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer DUMMY_TEST_TOKEN_LONG_ENOUGH'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           userEmail, 
           title: noteData.title, 
@@ -137,10 +132,7 @@ export default function Notes() {
         { text: "Cancel", style: "cancel" },
         { text: "Delete", style: "destructive", onPress: async () => {
             try {
-                await fetch(`${BASE_URL}/api/notes/${id}?email=${userEmail}`, { 
-                  method: 'DELETE',
-                  headers: { 'Authorization': 'Bearer DUMMY_TEST_TOKEN_LONG_ENOUGH' }
-                });
+                await authFetch(`${BASE_URL}/api/notes/${id}?email=${userEmail}`, { method: 'DELETE' });
                 setNotes(prev => prev.filter(n => n._id !== id));
                 setView('list');
             } catch (e) { console.error("Delete Failed:", e); }
@@ -153,12 +145,9 @@ export default function Notes() {
     setIsProcessing(true);
     setShowAiMenu(false);
     try {
-      const response = await fetch(`${BASE_URL}/api/ai/process-note`, {
+      const response = await authFetch(`${BASE_URL}/api/ai/process-note`, {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer DUMMY_TEST_TOKEN_LONG_ENOUGH'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ note: currentNote.content, action })
       });
       const data = await response.json();
@@ -192,12 +181,12 @@ export default function Notes() {
 
   if (view === 'list') {
     return (
-      <View style={{ flex: 1, backgroundColor: activeTheme.bg }} nativeID="notes-pane">
+      <View style={{ flex: 1, backgroundColor: activeTheme.bg }}>
         <View style={styles.listHeader}>
           <Text style={[styles.listTitle, { color: activeTheme.text }]}>My <Text style={{ color: activeTheme.accent }}>Notes</Text></Text>
           <View style={{ flexDirection: 'row', gap: 10 }}>
             {isSyncing && <ActivityIndicator size="small" color={activeTheme.accent} />}
-            <TouchableOpacity onPress={createNewNote} style={[styles.addBtn, { backgroundColor: activeTheme.accent }]} nativeID="add-note-btn">
+            <TouchableOpacity onPress={createNewNote} style={[styles.addBtn, { backgroundColor: activeTheme.accent }]}>
               <Plus size={24} color="#fff" />
             </TouchableOpacity>
           </View>
@@ -210,7 +199,7 @@ export default function Notes() {
             </View>
           ) : notes.map((n, i) => (
             <MotiView key={n._id || i} from={{ opacity: 0, translateY: 20 }} animate={{ opacity: 1, translateY: 0 }} transition={{ delay: i * 50 }}>
-              <TouchableOpacity onPress={() => openNote(n)} style={[styles.noteCard, { backgroundColor: activeTheme.card, borderColor: activeTheme.border }]} nativeID={`note-card-${i}`}>
+              <TouchableOpacity onPress={() => openNote(n)} style={[styles.noteCard, { backgroundColor: activeTheme.card, borderColor: activeTheme.border }]}>
                 <Text style={[styles.noteCardTitle, { color: activeTheme.text }]} numberOfLines={1}>{n.title || 'Untitled Document'}</Text>
                 <Text style={[styles.noteCardPreview, { color: activeTheme.subText }]} numberOfLines={2}>{n.content || 'No content yet...'}</Text>
                 <View style={styles.noteCardFooter}>
@@ -229,8 +218,8 @@ export default function Notes() {
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1, backgroundColor: activeTheme.bg }}>
       <View style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => setView('list')} style={styles.backBtn} nativeID="note-back-btn"><ChevronLeft size={28} color={activeTheme.text} /></TouchableOpacity>
-          <TextInput style={[styles.titleInput, { color: activeTheme.text }]} value={currentNote.title} onChangeText={handleTitleChange} placeholder="Untitled Document" placeholderTextColor={activeTheme.subText} nativeID="note-title-input" />
+          <TouchableOpacity onPress={() => setView('list')} style={styles.backBtn}><ChevronLeft size={28} color={activeTheme.text} /></TouchableOpacity>
+          <TextInput style={[styles.titleInput, { color: activeTheme.text }]} value={currentNote.title} onChangeText={handleTitleChange} placeholder="Untitled Document" placeholderTextColor={activeTheme.subText} />
           <View style={styles.statusContainer}>{isSaving ? <ActivityIndicator size="small" color={activeTheme.accent} /> : <Check size={16} color={activeTheme.subText} />}</View>
         </View>
         <View style={styles.toolbar}>
@@ -238,13 +227,13 @@ export default function Notes() {
             <View style={styles.toolItem}><AlignLeft size={12} color={activeTheme.subText} /><Text style={[styles.toolText, { color: activeTheme.subText }]}>{stats.words} Words</Text></View>
             <View style={styles.toolItem}><Clock size={12} color={activeTheme.subText} /><Text style={[styles.toolText, { color: activeTheme.subText }]}>{stats.readingTime}m Read</Text></View>
         </View>
-        <View style={[styles.editorContainer, { backgroundColor: activeTheme.card, borderColor: activeTheme.border }]}><TextInput style={[styles.input, { color: activeTheme.text }]} multiline placeholder="Start writing your thoughts..." placeholderTextColor={activeTheme.subText} value={currentNote.content} onChangeText={handleContentChange} textAlignVertical="top" nativeID="note-content-input" /></View>
+        <View style={[styles.editorContainer, { backgroundColor: activeTheme.card, borderColor: activeTheme.border }]}><TextInput style={[styles.input, { color: activeTheme.text }]} multiline placeholder="Start writing your thoughts..." placeholderTextColor={activeTheme.subText} value={currentNote.content} onChangeText={handleContentChange} textAlignVertical="top" /></View>
         <View style={styles.fabContainer}>
           <AnimatePresence>
             {showAiMenu && (
               <MotiView from={{ opacity: 0, scale: 0.5, translateY: 20 }} animate={{ opacity: 1, scale: 1, translateY: 0 }} exit={{ opacity: 0, scale: 0.5, translateY: 20 }} style={[styles.aiMenu, { backgroundColor: activeTheme.card, borderColor: activeTheme.accent }]}>
                 {aiOptions.map((opt) => (
-                  <TouchableOpacity key={opt.id} onPress={() => handleAiActionInternal(opt.id)} style={[styles.aiOption, { borderBottomColor: activeTheme.border }]} nativeID={`ai-option-${opt.id}`}>
+                  <TouchableOpacity key={opt.id} onPress={() => handleAiActionInternal(opt.id)} style={[styles.aiOption, { borderBottomColor: activeTheme.border }]}>
                     <View style={[styles.optIcon, { backgroundColor: opt.color }]}>{opt.icon}</View>
                     <Text style={[styles.optLabel, { color: activeTheme.text }]}>{opt.label}</Text>
                   </TouchableOpacity>
@@ -252,7 +241,7 @@ export default function Notes() {
               </MotiView>
             )}
           </AnimatePresence>
-          <TouchableOpacity onPress={() => setShowAiMenu(!showAiMenu)} disabled={isProcessing} style={[styles.fab, { backgroundColor: activeTheme.accent }]} nativeID="ai-menu-btn">{isProcessing ? <ActivityIndicator color="#fff" /> : <Sparkles color="#fff" size={28} />}</TouchableOpacity>
+          <TouchableOpacity onPress={() => setShowAiMenu(!showAiMenu)} disabled={isProcessing} style={[styles.fab, { backgroundColor: activeTheme.accent }]}>{isProcessing ? <ActivityIndicator color="#fff" /> : <Sparkles color="#fff" size={28} />}</TouchableOpacity>
         </View>
         <View style={styles.footerActions}>
             <TouchableOpacity onPress={() => deleteNote(currentNote._id)} style={[styles.actionBtn, { borderColor: '#ef444422' }]}><Trash2 size={18} color="#ef4444" /><Text style={[styles.actionBtnText, { color: '#ef4444' }]}>Delete</Text></TouchableOpacity>
@@ -264,14 +253,7 @@ export default function Notes() {
 }
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    padding: 24, 
-    paddingTop: 60,
-    width: '100%',
-    maxWidth: Platform.OS === 'web' ? 800 : '100%',
-    alignSelf: 'center'
-  },
+  container: { flex: 1, padding: 16, paddingTop: 40 },
   header: { flexDirection: 'row', alignItems: 'center', marginBottom: 10, gap: 10 },
   backBtn: { padding: 5, marginLeft: -10 },
   titleInput: { fontSize: 20, fontWeight: '800', flex: 1, padding: 0 },
@@ -283,7 +265,7 @@ const styles = StyleSheet.create({
   input: { flex: 1, fontSize: 16, lineHeight: 26, fontWeight: '500' },
   fabContainer: { position: 'absolute', bottom: 110, right: 24, alignItems: 'flex-end', zIndex: 9999, elevation: 20 },
   fab: { width: 64, height: 64, borderRadius: 32, justifyContent: 'center', alignItems: 'center', elevation: 10, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 },
-  aiMenu: { marginBottom: 16, borderRadius: 24, borderWidth: 2, overflow: 'hidden', width: 200, elevation: 20, zIndex: 10000 },
+  aiMenu: { marginBottom: 16, borderRadius: 24, borderWidth: 2, overflow: 'hidden', minWidth: 160, elevation: 20, zIndex: 10000 },
   aiOption: { flexDirection: 'row', alignItems: 'center', padding: 14, borderBottomWidth: 1, gap: 12 },
   optIcon: { width: 32, height: 32, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
   optLabel: { fontWeight: '700', fontSize: 13 },
@@ -292,10 +274,10 @@ const styles = StyleSheet.create({
   actionBtnText: { fontSize: 13, fontWeight: 'bold' },
   syncStatus: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   syncText: { fontSize: 11, fontWeight: '600', opacity: 0.6 },
-  listHeader: { padding: 24, paddingTop: 60, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  listTitle: { fontSize: 32, fontWeight: '900' },
+  listHeader: { padding: 16, paddingTop: 40, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  listTitle: { fontSize: 24, fontWeight: '900' },
   addBtn: { width: 50, height: 50, borderRadius: 25, justifyContent: 'center', alignItems: 'center', elevation: 5 },
-  listContent: { padding: 24, paddingBottom: 150 },
+  listContent: { padding: 16, paddingBottom: 120 },
   noteCard: { borderRadius: 24, padding: 20, marginBottom: 15, borderWidth: 1 },
   noteCardTitle: { fontSize: 18, fontWeight: '800', marginBottom: 8 },
   noteCardPreview: { fontSize: 14, lineHeight: 20, opacity: 0.7, marginBottom: 15 },

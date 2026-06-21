@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, ImageBackground, RefreshControl } from 'react-native';
 import { MotiView, AnimatePresence } from 'moti';
-import { useApp } from '../_layout';
+import { useApp, authFetch } from '../_layout';
 import { Gamepad2, Brain, Trophy, Zap, Target, Star, Flame, Sword } from 'lucide-react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -18,7 +18,7 @@ export default function Arena() {
   const fetchUserData = async () => {
     try {
       const email = user?.email || (await AsyncStorage.getItem('userEmail')) || 'guest@vortex.com';
-      const res = await fetch(`${API_BASE}/api/user?email=${email}`);
+      const res = await authFetch(`${API_BASE}/api/user?email=${email}`);
       const data = await res.json();
       if (res.ok) setUserStats({ xp: data.xp || 0, level: data.level || 1 });
     } catch (e) { }
@@ -163,9 +163,9 @@ export default function Arena() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   scrollContent: { paddingBottom: 150 },
-  viewContainer: { padding: 24, paddingTop: 60 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 30 },
-  title: { fontSize: 34, fontWeight: '900', letterSpacing: -1.5 },
+  viewContainer: { padding: 16, paddingTop: 24 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 },
+  title: { fontSize: 26, fontWeight: '900', letterSpacing: -1 },
   subtitle: { fontSize: 13, marginTop: 4, fontWeight: '700', opacity: 0.8 },
   streakBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(249, 115, 22, 0.1)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 15, borderWidth: 1, borderColor: '#f97316' },
   streakText: { color: '#f97316', fontWeight: '900', fontSize: 16 },

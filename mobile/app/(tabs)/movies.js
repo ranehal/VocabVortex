@@ -5,11 +5,79 @@ import { useApp } from '../_layout';
 import { Search, Upload, Clock, X, ChevronRight, Play, FileVideo } from 'lucide-react-native';
 import WheelPicker from '../../components/WheelPicker';
 import LoadingSpinner from '../../components/LoadingSpinner';
-import { Video, ResizeMode } from 'expo-av';
 import * as DocumentPicker from 'expo-document-picker';
 import { BASE_URL } from '../../constants';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
+const DEMO_MOVIES = [
+  {
+    _id: 'demo_forrest_gump',
+    title: 'Forrest Gump',
+    year: '1994',
+    posterEmoji: '🏃',
+    dialogues: [
+      { timestamp: '00:02:15', speaker: 'FORREST', en: "My mama always said life was like a box of chocolates. You never know what you're gonna get.", bn: null },
+      { timestamp: '00:05:30', speaker: 'FORREST', en: "Stupid is as stupid does.", bn: null },
+      { timestamp: '00:08:45', speaker: 'JENNY',   en: "Run, Forrest! Run!", bn: null },
+      { timestamp: '00:12:00', speaker: 'FORREST', en: "I may not be a smart man, but I know what love is.", bn: null },
+      { timestamp: '00:15:20', speaker: 'MRS GUMP', en: "You have to do the best with what God gave you.", bn: null },
+      { timestamp: '00:20:30', speaker: 'FORREST', en: "I don't know if we each have a destiny, or if we're all just floating around accidental-like on a breeze.", bn: null },
+      { timestamp: '00:25:15', speaker: 'FORREST', en: "Jenny and me was like peas and carrots.", bn: null },
+      { timestamp: '00:30:00', speaker: 'FORREST', en: "Now you wouldn't believe me if I told you, but I could run like the wind blows.", bn: null },
+      { timestamp: '00:35:45', speaker: 'MRS GUMP', en: "Mama always said dyin' was a part of life. I sure wish it wasn't.", bn: null },
+      { timestamp: '00:40:00', speaker: 'FORREST', en: "I am not a smart man, but I know what love is.", bn: null },
+      { timestamp: '00:45:20', speaker: 'FORREST', en: "That day, for no particular reason, I decided to go for a little run.", bn: null },
+      { timestamp: '00:50:00', speaker: 'DRILL SGT', en: "Gump! What's your sole purpose in this army?", bn: null },
+      { timestamp: '00:54:30', speaker: 'FORREST', en: "To do whatever you tell me, drill sergeant!", bn: null },
+      { timestamp: '01:00:00', speaker: 'BUBBA',   en: "Shrimp is the fruit of the sea. You can barbecue it, boil it, broil it, bake it, sauté it.", bn: null },
+      { timestamp: '01:05:15', speaker: 'FORREST', en: "Mama always had a way of explaining things so I could understand them.", bn: null },
+    ],
+  },
+  {
+    _id: 'demo_lion_king',
+    title: 'The Lion King',
+    year: '1994',
+    posterEmoji: '🦁',
+    dialogues: [
+      { timestamp: '00:03:10', speaker: 'MUFASA',  en: "Everything the light touches is our kingdom.", bn: null },
+      { timestamp: '00:07:25', speaker: 'MUFASA',  en: "A king's time as ruler rises and falls like the sun. One day, Simba, the sun will set on my time here and will rise with you as the new king.", bn: null },
+      { timestamp: '00:12:40', speaker: 'TIMON',   en: "Hakuna Matata! What a wonderful phrase. It means no worries for the rest of your days.", bn: null },
+      { timestamp: '00:18:00', speaker: 'RAFIKI',  en: "Oh yes, the past can hurt. But the way I see it, you can either run from it or learn from it.", bn: null },
+      { timestamp: '00:23:15', speaker: 'MUFASA',  en: "Remember who you are. You are my son and the one true king.", bn: null },
+      { timestamp: '00:28:30', speaker: 'MUFASA',  en: "Being brave doesn't mean you go looking for trouble.", bn: null },
+      { timestamp: '00:33:45', speaker: 'MUFASA',  en: "Look inside yourself, Simba. You are more than what you have become.", bn: null },
+      { timestamp: '00:38:00', speaker: 'SIMBA',   en: "I laugh in the face of danger! Ha ha ha ha!", bn: null },
+      { timestamp: '00:43:20', speaker: 'RAFIKI',  en: "The question is: who are you?", bn: null },
+      { timestamp: '00:48:35', speaker: 'MUFASA',  en: "Everything you see exists together in a delicate balance. As king, you need to understand that balance.", bn: null },
+      { timestamp: '00:53:50', speaker: 'MUFASA',  en: "While others search for what they can take, a true king searches for what he can give.", bn: null },
+      { timestamp: '00:58:10', speaker: 'SIMBA',   en: "I know what I have to do. But going back means I'll have to face my past.", bn: null },
+      { timestamp: '01:03:25', speaker: 'RAFIKI',  en: "It doesn't matter; it's in the past!", bn: null },
+      { timestamp: '01:08:40', speaker: 'SIMBA',   en: "I am Simba, son of Mufasa!", bn: null },
+    ],
+  },
+  {
+    _id: 'demo_happyness',
+    title: 'The Pursuit of Happyness',
+    year: '2006',
+    posterEmoji: '💼',
+    dialogues: [
+      { timestamp: '00:05:00', speaker: 'CHRIS',    en: "Don't ever let somebody tell you you can't do something. Not even me.", bn: null },
+      { timestamp: '00:10:15', speaker: 'CHRIS',    en: "You got a dream, you gotta protect it.", bn: null },
+      { timestamp: '00:15:30', speaker: 'CHRIS',    en: "You want something, go get it. Period.", bn: null },
+      { timestamp: '00:20:45', speaker: 'CHRIS SR', en: "This part of my life — this little part — is called happiness.", bn: null },
+      { timestamp: '00:25:00', speaker: 'CHRIS',    en: "I'm the type of person that if you ask me a question, I'm gonna tell you the truth.", bn: null },
+      { timestamp: '00:30:15', speaker: 'CHRIS SR', en: "It was right then that I started thinking about Thomas Jefferson and the pursuit of happiness.", bn: null },
+      { timestamp: '00:35:30', speaker: 'CHRIS',    en: "And that maybe happiness is something that we can only pursue, and maybe we can actually never have it.", bn: null },
+      { timestamp: '00:40:45', speaker: 'CHRIS',    en: "Hey. Don't ever let somebody tell you you can't do something.", bn: null },
+      { timestamp: '00:45:00', speaker: 'CHRIS SR', en: "I met my father for the first time when I was 28 years old. I made up my mind that when I had children, my children were going to know who their father was.", bn: null },
+      { timestamp: '00:50:15', speaker: 'INTERVIEWER', en: "What would you say if a man walked in here with no shirt, and I hired him? What would you say?", bn: null },
+      { timestamp: '00:54:30', speaker: 'CHRIS',    en: "He must have had on some really nice pants.", bn: null },
+      { timestamp: '00:59:45', speaker: 'CHRIS SR', en: "We're just having a rough patch. Things are gonna get better. I promise.", bn: null },
+      { timestamp: '01:05:00', speaker: 'CHRIS',    en: "I just want to say, as a person: this is the greatest moment of my life.", bn: null },
+    ],
+  },
+];
 
 function parseSRT(srt) {
   const lines = srt.replace(/\r/g, '').split('\n');
@@ -124,21 +192,37 @@ export default function Movies() {
     try {
       const res = await fetch(`${BASE_URL}/api/movies${q ? `?q=${q}` : ''}`);
       const data = await res.json();
-      setMovies(Array.isArray(data) ? data : []);
-    } catch (e) { } finally { setLoading(false); }
+      const dbMovies = Array.isArray(data) ? data : [];
+      // Always prepend demo movies; filter out if DB already has same title
+      const demoTitles = new Set(dbMovies.map(m => m.title.toLowerCase()));
+      const filtered = DEMO_MOVIES.filter(m => !demoTitles.has(m.title.toLowerCase()));
+      setMovies([...filtered, ...dbMovies]);
+    } catch (e) {
+      setMovies(DEMO_MOVIES);
+    } finally { setLoading(false); }
   };
 
   const fetchMovieSuggestions = async (query = '') => {
     try {
-      const res = await fetch(`${BASE_URL}/api/movies${query ? `?q=${query}` : ''}`);
-      const local = await res.json();
+      const q = query.toLowerCase();
+      const demoMatches = DEMO_MOVIES.filter(m => m.title.toLowerCase().includes(q));
+      let dbMovies = [];
       let external = [];
-      if (query.length >= 3) {
-        const extRes = await fetch(`${BASE_URL}/api/movies/external-search?q=${encodeURIComponent(query)}`);
-        const extData = await extRes.json();
-        external = (extData || []).map(m => ({ ...m, isExternal: true, posterEmoji: '🌐' }));
-      }
-      setMovieSuggestions([...(local || []), ...external]);
+      try {
+        const res = await fetch(`${BASE_URL}/api/movies${query ? `?q=${query}` : ''}`);
+        dbMovies = await res.json();
+        if (!Array.isArray(dbMovies)) dbMovies = [];
+      } catch (_) {}
+      try {
+        if (query.length >= 3) {
+          const extRes = await fetch(`${BASE_URL}/api/movies/external-search?q=${encodeURIComponent(query)}`);
+          const extData = await extRes.json();
+          external = (extData || []).map(m => ({ ...m, isExternal: true, posterEmoji: '🌐' }));
+        }
+      } catch (_) {}
+      const demoTitles = new Set([...dbMovies.map(m => m.title.toLowerCase())]);
+      const filteredDemo = demoMatches.filter(m => !demoTitles.has(m.title.toLowerCase()));
+      setMovieSuggestions([...filteredDemo, ...dbMovies, ...external]);
     } catch (e) { }
   };
 
@@ -160,6 +244,13 @@ export default function Movies() {
   };
 
   const selectMovie = async (movie) => {
+    // Demo movies have full dialogues already — no server call needed
+    if (movie._id?.startsWith('demo_')) {
+      setSelectedMovie(movie);
+      setDialogues(movie.dialogues || []);
+      setFilterSpeaker('All');
+      return;
+    }
     setLoading(true);
     try {
       const res = await fetch(`${BASE_URL}/api/movies/${movie._id}`);
@@ -191,17 +282,16 @@ export default function Movies() {
 
   const handleJump = () => {
     const targetSec = (jumpH * 3600) + (jumpM * 60) + jumpS;
-    const index = filteredDialogues.findIndex(d => timeToSeconds(d.timestamp) >= targetSec);
-    if (index !== -1) {
-      if (flatListRef.current) {
-        flatListRef.current.scrollToIndex({ index, animated: true, viewPosition: 0 });
-      }
+    let index = filteredDialogues.findIndex(d => timeToSeconds(d.timestamp) >= targetSec);
+    if (index === -1) index = filteredDialogues.length - 1; // clamp to last subtitle
+    if (index >= 0) {
+      flatListRef.current?.scrollToIndex({ index, animated: true, viewPosition: 0 });
       setHighlightedIndex(index);
       setTimeout(() => setHighlightedIndex(null), 3000);
       const target = filteredDialogues[index];
       const realIndex = dialogues.indexOf(target);
       if (realIndex !== -1 && !target.bn) translateLine(realIndex, target.en);
-    } else { alert("Time beyond subtitles."); }
+    }
   };
 
   const renderDialogueText = (text) => {
@@ -296,7 +386,7 @@ export default function Movies() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: activeTheme.bg }]} nativeID="movies-pane">
+    <View style={[styles.container, { backgroundColor: activeTheme.bg }]}>
       <View style={styles.header}>
         <Text style={{ color: activeTheme.text, fontSize: 24, fontWeight: '900' }}>MOVIE <Text style={{ color: activeTheme.accent }}>DIALOGUES</Text></Text>
         <View style={{ flexDirection: 'row', gap: 10 }}>
@@ -308,15 +398,15 @@ export default function Movies() {
       {!selectedMovie ? (
         <View style={{ flex: 1 }}>
           <View style={[styles.searchContainer, { borderBottomColor: activeTheme.border }]}>
-            <TextInput style={{ flex: 1, color: activeTheme.text, height: 60, fontSize: 16, paddingHorizontal: 20 }} placeholder="Search Movies..." placeholderTextColor={activeTheme.subText} value={searchQuery} onChangeText={setSearchQuery} nativeID="movie-search-input" />
+            <TextInput style={{ flex: 1, color: activeTheme.text, height: 60, fontSize: 16, paddingHorizontal: 20 }} placeholder="Search Movies..." placeholderTextColor={activeTheme.subText} value={searchQuery} onChangeText={setSearchQuery} />
             <Search size={24} color={activeTheme.accent} style={{ marginRight: 20 }} />
           </View>
           
           <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
             {movieSuggestions.length > 0 && searchQuery.length > 0 && (
               <View style={[styles.suggestions, { backgroundColor: activeTheme.card, borderColor: activeTheme.border }]}>
-                {movieSuggestions.slice(0, 5).map((m, i) => (
-                  <TouchableOpacity key={m._id || m.imdbId} onPress={() => selectSuggestion(m)} style={[styles.suggestionItem, { borderBottomColor: activeTheme.border }]} nativeID={`movie-suggestion-${i}`}>
+                {movieSuggestions.slice(0, 5).map(m => (
+                  <TouchableOpacity key={m._id || m.imdbId} onPress={() => selectSuggestion(m)} style={[styles.suggestionItem, { borderBottomColor: activeTheme.border }]}>
                     <Text style={{ fontSize: 24 }}>{m.posterEmoji}</Text>
                     <View><Text style={{ color: activeTheme.text, fontWeight: 'bold' }}>{m.title}</Text><Text style={{ color: activeTheme.subText, fontSize: 12 }}>{m.year}</Text></View>
                   </TouchableOpacity>
@@ -354,106 +444,72 @@ export default function Movies() {
           )}
         </View>
       ) : (
-        <View style={{ flex: 1 }}>
-          <View style={{ paddingHorizontal: 24 }}>
-            <TouchableOpacity onPress={() => { setSelectedMovie(null); setLocalVideoUri(null); }} style={styles.backBtn}><X size={20} color={activeTheme.subText} /><Text style={{ color: activeTheme.subText, fontWeight: 'bold' }}>BACK TO GALLERY</Text></TouchableOpacity>
-            
-            {localVideoUri ? (
-                <View style={styles.videoContainer}>
-                    <Video
-                        ref={videoRef}
-                        source={{ uri: localVideoUri }}
-                        rate={1.0}
-                        volume={1.0}
-                        isMuted={false}
-                        resizeMode={ResizeMode.CONTAIN}
-                        shouldPlay
-                        useNativeControls
-                        style={styles.video}
-                        onPlaybackStatusUpdate={handlePlaybackStatusUpdate}
-                    />
-                    {currentDialogue && (
-                        <View style={styles.subtitleOverlay}>
-                            <Text style={styles.subtitleText}>{currentDialogue.en}</Text>
-                        </View>
-                    )}
+        <FlatList
+          ref={flatListRef}
+          data={filteredDialogues}
+          keyExtractor={(item, index) => index.toString()}
+          renderItem={renderItem}
+          showsVerticalScrollIndicator={true}
+          contentContainerStyle={{ paddingBottom: 150, paddingHorizontal: 24 }}
+          onScrollToIndexFailed={info => {
+            flatListRef.current?.scrollToOffset({ offset: info.index * 122, animated: true });
+          }}
+          ListHeaderComponent={() => (
+            <View>
+              <TouchableOpacity onPress={() => { setSelectedMovie(null); setLocalVideoUri(null); }} style={styles.backBtn}>
+                <X size={20} color={activeTheme.subText} />
+                <Text style={{ color: activeTheme.subText, fontWeight: 'bold' }}>BACK TO GALLERY</Text>
+              </TouchableOpacity>
+
+              {localVideoUri ? (
+                <View style={[styles.videoContainer, { justifyContent: 'center', alignItems: 'center', backgroundColor: '#111' }]}>
+                  <Text style={{ color: '#fff', fontSize: 16, opacity: 0.6 }}>🎬 Subtitles loaded below</Text>
+                  {currentDialogue && (
+                    <View style={styles.subtitleOverlay}>
+                      <Text style={styles.subtitleText}>{currentDialogue.en}</Text>
+                    </View>
+                  )}
                 </View>
-            ) : (
+              ) : (
                 <View style={[styles.heroCard, { backgroundColor: activeTheme.card, borderColor: activeTheme.border }]}>
-                    <Text style={{ color: activeTheme.text, fontSize: 20, fontWeight: 'bold' }} numberOfLines={1}>{selectedMovie.title}</Text>
-                    <View style={[styles.jumpBox, { backgroundColor: activeTheme.bg, borderColor: activeTheme.border }]}>
+                  <Text style={{ color: activeTheme.text, fontSize: 20, fontWeight: 'bold' }} numberOfLines={1}>{selectedMovie.title}</Text>
+                  <View style={[styles.jumpBox, { backgroundColor: activeTheme.bg, borderColor: activeTheme.border }]}>
                     <Clock size={16} color={activeTheme.accent} />
                     <View style={styles.wheelContainer}>
-                        <WheelPicker range={24} value={jumpH} onChange={setJumpH} activeTheme={activeTheme} />
-                        <Text style={{ color: activeTheme.text, fontWeight: 'bold', fontSize: 24 }}>:</Text>
-                        <WheelPicker range={60} value={jumpM} onChange={setJumpM} activeTheme={activeTheme} />
-                        <Text style={{ color: activeTheme.text, fontWeight: 'bold', fontSize: 24 }}>:</Text>
-                        <WheelPicker range={60} value={jumpS} onChange={setJumpS} activeTheme={activeTheme} />
+                      <WheelPicker range={4} value={jumpH} onChange={setJumpH} activeTheme={activeTheme} />
+                      <Text style={{ color: activeTheme.text, fontWeight: 'bold', fontSize: 24 }}>:</Text>
+                      <WheelPicker range={60} value={jumpM} onChange={setJumpM} activeTheme={activeTheme} />
+                      <Text style={{ color: activeTheme.text, fontWeight: 'bold', fontSize: 24 }}>:</Text>
+                      <WheelPicker range={60} value={jumpS} onChange={setJumpS} activeTheme={activeTheme} />
                     </View>
-                    <TouchableOpacity onPress={handleJump} style={[styles.jumpBtn, { backgroundColor: activeTheme.accent }]} nativeID="jump-btn"><Text style={styles.jumpBtnText}>JUMP</Text></TouchableOpacity>
-                    </View>
+                    <TouchableOpacity onPress={handleJump} style={[styles.jumpBtn, { backgroundColor: activeTheme.accent }]}>
+                      <Text style={styles.jumpBtnText}>JUMP</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
-            )}
+              )}
 
-            <View style={[styles.findWordBox, { backgroundColor: activeTheme.card, borderColor: activeTheme.border, marginTop: 15 }]}>
-                <Search size={16} color={activeTheme.subText} /><TextInput placeholder="Find word in subtitles..." placeholderTextColor={activeTheme.subText} style={{ flex: 1, height: 44, color: activeTheme.text, marginLeft: 10 }} value={subtitleSearch} onChangeText={setSubtitleSearch} />
+              <View style={[styles.findWordBox, { backgroundColor: activeTheme.card, borderColor: activeTheme.border, marginTop: 15, marginBottom: 15 }]}>
+                <Search size={16} color={activeTheme.subText} />
+                <TextInput
+                  placeholder="Find word in subtitles..."
+                  placeholderTextColor={activeTheme.subText}
+                  style={{ flex: 1, height: 44, color: activeTheme.text, marginLeft: 10 }}
+                  value={subtitleSearch}
+                  onChangeText={setSubtitleSearch}
+                />
+              </View>
             </View>
-          </View>
-
-          <FlatList
-            ref={flatListRef}
-            data={filteredDialogues}
-            keyExtractor={(item, index) => index.toString()}
-            renderItem={({ item: d, index: i }) => {
-              const realIndex = dialogues.indexOf(d);
-              const isHighlighted = (highlightedIndex === i) || (currentDialogue === d);
-              return (
-                <TouchableOpacity 
-                  activeOpacity={0.8} 
-                  onPress={() => {
-                      if (localVideoUri && videoRef.current) {
-                          videoRef.current.setPositionAsync((d.startTime || 0) * 1000);
-                      } else if (!d.bn) {
-                          translateLine(realIndex, d.en);
-                      }
-                  }} 
-                  style={[styles.itemCard, { backgroundColor: isHighlighted ? activeTheme.accent : activeTheme.card, borderColor: activeTheme.border }]}
-                  nativeID={`sub-line-${i}`}
-                >
-                  <View style={styles.itemHeader}>
-                    <Text style={{ color: isHighlighted ? '#fff' : activeTheme.accent, fontWeight: 'bold', fontSize: 11 }}>{d.speaker?.toUpperCase() || ''}</Text>
-                    <Text style={{ color: isHighlighted ? '#fff' : activeTheme.subText, fontSize: 10 }}>{d.timestamp}</Text>
-                  </View>
-                  <View>
-                    {renderDialogueText(d.en)}
-                  </View>
-                  {d.bn && <Text style={{ color: isHighlighted ? '#fff' : activeTheme.accent, marginTop: 8, fontSize: 14, fontWeight: '600', borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)', paddingTop: 10 }}>{d.bn}</Text>}
-                  {translatingLine === realIndex && <ActivityIndicator size="small" color={isHighlighted ? '#fff' : activeTheme.accent} style={styles.loaderIcon} />}
-                </TouchableOpacity>
-              );
-            }}
-            showsVerticalScrollIndicator={true}
-            contentContainerStyle={{ paddingBottom: 150, paddingHorizontal: 24 }}
-            onScrollToIndexFailed={info => {
-               flatListRef.current?.scrollToOffset({ offset: info.index * 122, animated: true });
-            }}
-          />
-        </View>
-      )
-    }
-    {loading && <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' }]}><LoadingSpinner activeTheme={activeTheme} /></View>}
+          )}
+        />
+      )}
+      {loading && <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' }]}><LoadingSpinner activeTheme={activeTheme} /></View>}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    paddingTop: 60,
-    width: '100%',
-    maxWidth: Platform.OS === 'web' ? 1200 : '100%',
-    alignSelf: 'center'
-  },
+  container: { flex: 1, paddingTop: 60 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 24, marginBottom: 20 },
   iconButton: { padding: 12, borderRadius: 16, borderWidth: 1 },
   searchContainer: { flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1 },
@@ -473,20 +529,9 @@ const styles = StyleSheet.create({
   loaderIcon: { position: 'absolute', right: 15, bottom: 15 },
   subPicker: { padding: 20, borderRadius: 24, borderWidth: 1, maxHeight: '80%' },
   subItem: { paddingVertical: 15, borderBottomWidth: 1 },
-  videoContainer: { 
-    width: '100%', 
-    aspectRatio: 16/9, 
-    borderRadius: 24, 
-    overflow: 'hidden', 
-    backgroundColor: '#000',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.3,
-    shadowRadius: 15,
-    elevation: 10
-  },
+  videoContainer: { width: '100%', aspectRatio: 16/9, borderRadius: 20, overflow: 'hidden', backgroundColor: '#000' },
   video: { flex: 1 },
-  subtitleOverlay: { position: 'absolute', bottom: 80, left: 10, right: 10, alignItems: 'center' },
-  subtitleText: { color: '#fff', backgroundColor: 'rgba(0,0,0,0.8)', paddingHorizontal: 20, paddingVertical: 10, fontSize: 20, fontWeight: '700', textAlign: 'center', borderRadius: 12, overflow: 'hidden' }
+  subtitleOverlay: { position: 'absolute', bottom: 40, left: 10, right: 10, alignItems: 'center' },
+  subtitleText: { color: '#fff', backgroundColor: 'rgba(0,0,0,0.6)', paddingHorizontal: 10, paddingVertical: 5, fontSize: 16, textAlign: 'center', borderRadius: 5 }
 });
 

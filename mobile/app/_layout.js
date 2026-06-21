@@ -39,8 +39,20 @@ const AppContext = createContext({
 
 export const useApp = () => useContext(AppContext);
 
+// Fetch with session token from AsyncStorage attached as Authorization header
+export async function authFetch(url, options = {}) {
+  const token = await AsyncStorage.getItem('vortex_session');
+  return fetch(url, {
+    ...options,
+    headers: {
+      ...(options.headers || {}),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  });
+}
+
 export default function RootLayout() {
-  const [themeKey, setThemeKey] = useState('amoled');
+  const [themeKey, setThemeKey] = useState('sky');
   const [user, setUser] = useState(null);
   const [bookmarks, setBookmarks] = useState([]);
   const [selectedWordData, setSelectedWordData] = useState(null);
@@ -64,7 +76,7 @@ export default function RootLayout() {
         // Fetch latest data from server
         if (email && !email.startsWith('guest_')) {
           try {
-            const res = await fetch(`${BASE_URL}/api/user?email=${email}`);
+            const res = await authFetch(`${BASE_URL}/api/user?email=${email}`);
             const data = await res.json();
             if (res.ok) {
               setUser(data);
@@ -105,12 +117,9 @@ export default function RootLayout() {
     setTappingLoading(true);
     try {
       const level = (await AsyncStorage.getItem('userLevel')) || 'A2';
-      const response = await fetch(`${BASE_URL}/api/word`, {
+      const response = await authFetch(`${BASE_URL}/api/word`, {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer DUMMY_TEST_TOKEN_LONG_ENOUGH'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ word: cleanWord, level })
       });
       const data = await response.json();
@@ -132,16 +141,13 @@ export default function RootLayout() {
       try {
         const email = await AsyncStorage.getItem('userEmail');
         if (email && !email.startsWith('guest_')) {
-          await fetch(`${BASE_URL}/api/user`, {
+          await authFetch(`${BASE_URL}/api/user`, {
             method: 'POST',
-            headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer DUMMY_TEST_TOKEN_LONG_ENOUGH'
-        },
-            body: JSON.stringify({ 
-              email, 
-              googleId: user?.googleId || 'synced-user', // Fallback or use real ID
-              bookmarks: next 
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              email,
+              googleId: user?.googleId || 'synced-user',
+              bookmarks: next
             })
           });
         }
@@ -223,7 +229,7 @@ export default function RootLayout() {
                     </View>
 
                     <View style={styles.modalActions}>
-                      <TouchableOpacity onPress={() => setSelectedWordData(null)} style={[styles.modalBtn, { backgroundColor: activeTheme.accent, elevation: 8 }]} nativeID="close-dict-modal-btn"><Zap size={18} color="#fff" /><Text style={styles.modalBtnText}>GOT IT</Text></TouchableOpacity>
+                      <TouchableOpacity onPress={() => setSelectedWordData(null)} style={[styles.modalBtn, { backgroundColor: activeTheme.accent, elevation: 8 }]}><Zap size={18} color="#fff" /><Text style={styles.modalBtnText}>GOT IT</Text></TouchableOpacity>
                       <TouchableOpacity onPress={() => addBookmark(selectedWordData?.word)} style={[styles.modalBtn, { backgroundColor: activeTheme.bg, borderWidth: 2, borderColor: activeTheme.accent }]}><Bookmark size={18} color={activeTheme.accent} /><Text style={[styles.modalBtnText, { color: activeTheme.text }]}>BOOKMARK</Text></TouchableOpacity>
                     </View>
                   </ScrollView>
@@ -238,11 +244,12 @@ export default function RootLayout() {
 
 const styles = StyleSheet.create({
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center' },
-  detailModal: { 
-    width: Platform.OS === 'web' ? Math.min(SCREEN_WIDTH * 0.9, 500) : '94%', 
-    maxHeight: '90%', 
-    borderRadius: 35, 
-    padding: 25, 
+  detailModal: {
+    width: '92%',
+    maxWidth: 480,
+    maxHeight: '90%',
+    borderRadius: 28,
+    padding: 20,
     borderWidth: 2,
     overflow: 'hidden',
     shadowColor: '#000',
@@ -251,14 +258,14 @@ const styles = StyleSheet.create({
     shadowRadius: 20,
     elevation: 20
   },
-  modalLoader: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 50 },
-  modalHeaderInner: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 25 },
-  modalWord: { fontSize: 38, fontWeight: '900', letterSpacing: -1 },
-  modalSpeakerBtn: { padding: 10, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 16 },
-  modalPhonetic: { fontSize: 14, fontWeight: '700' },
+  modalLoader: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 40 },
+  modalHeaderInner: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 },
+  modalWord: { fontSize: 28, fontWeight: '900', letterSpacing: -1, flexShrink: 1 },
+  modalSpeakerBtn: { padding: 8, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 12 },
+  modalPhonetic: { fontSize: 13, fontWeight: '700' },
   modalClose: { padding: 8, borderRadius: 12 },
-  modalMeaningCard: { padding: 20, borderRadius: 25, marginBottom: 25 },
-  modalMeaning: { fontSize: 24, fontWeight: '900', textAlign: 'center' },
+  modalMeaningCard: { padding: 16, borderRadius: 20, marginBottom: 16 },
+  modalMeaning: { fontSize: 20, fontWeight: '900', textAlign: 'center' },
   drillSection: { gap: 12, marginBottom: 30 },
   drillCard: { padding: 18, borderRadius: 20, borderLeftWidth: 6 },
   drillSentence: { fontSize: 16, fontWeight: '700', marginBottom: 6, lineHeight: 22 },

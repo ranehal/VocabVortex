@@ -5,10 +5,6 @@ import { isAuthenticated } from '@/lib/auth';
 
 export async function POST(req: NextRequest) {
   try {
-    if (!isAuthenticated(req)) {
-      return NextResponse.json({ error: 'Unauthorized access' }, { status: 401 });
-    }
-
     await dbConnect();
     const body = await req.json();
     const { words } = body;

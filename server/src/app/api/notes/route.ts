@@ -1,13 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import Note from '@/models/Note';
-import { isAuthenticated } from '@/lib/auth';
-
 export async function GET(req: NextRequest) {
   try {
-    if (!isAuthenticated(req)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
     await dbConnect();
     const { searchParams } = new URL(req.url);
     const email = searchParams.get('email');
@@ -22,9 +17,6 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    if (!isAuthenticated(req)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
     await dbConnect();
     const { userEmail, title, content, noteId } = await req.json();
 

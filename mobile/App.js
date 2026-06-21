@@ -1,4 +1,5 @@
 import './global.css';
+import { GROQ_API_KEY } from './constants';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   StyleSheet,
@@ -964,22 +965,51 @@ const LexFlowPage = ({ activeTheme }) => {
 
 // ─── ClauseFlow: Sentence Word Scramble ──────────────────────────────────────
 
-// ── ClauseFlow — calls server API (no user key needed) ───────────────────────
+// ── ClauseFlow — Groq direct call (no server needed) ─────────────────────────
+
+const CLAUSE_SYSTEM_PROMPT = `You are an English grammar analysis assistant. Analyze the given English sentence and break it into clauses and/or phrases.
+
+Return ONLY valid JSON array (no markdown, no explanation):
+[
+  {
+    "text": "<the clause or phrase text>",
+    "type": "<e.g. main clause, subordinate clause, noun phrase, verb phrase, prepositional phrase, etc.>",
+    "syntax": "<grammatical role: e.g. Subject + Verb + Object>",
+    "meaning": "<Bengali meaning of this part>",
+    "buildUp": ["<shortest form>", "<add more>", "<full form>"]
+  }
+]
+Return 2–5 segments. BuildUp should show how the clause is built step by step (1–4 lines).`;
 
 async function analyzeClause(sentence) {
-  let res;
   try {
-    res = await fetch(`${BASE_URL}/api/clause-analyze`, {
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sentence }),
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${GROQ_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        messages: [
+          { role: 'system', content: CLAUSE_SYSTEM_PROMPT },
+          { role: 'user', content: `Sentence: "${sentence.trim()}"` },
+        ],
+        temperature: 0.5,
+        max_tokens: 1200,
+      }),
     });
-  } catch (netErr) {
-    throw new Error(`সার্ভার সংযোগ হচ্ছে না। RunVortex.bat দিয়ে সার্ভার চালু করুন।\n(${netErr.message})`);
+    if (!res.ok) {
+      const err = await res.text();
+      throw new Error(`Groq API error: ${err}`);
+    }
+    const data = await res.json();
+    const raw = data.choices?.[0]?.message?.content ?? '';
+    const cleaned = raw.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+    return JSON.parse(cleaned);
+  } catch (e) {
+    throw new Error(`বিশ্লেষণ ব্যর্থ হয়েছে: ${e.message}`);
   }
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error ?? 'Analysis failed');
-  return data;
 }
 
 // Type → color palette

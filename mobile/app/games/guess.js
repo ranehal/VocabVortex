@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, KeyboardAvoidingView, Platform, Dimensions } from 'react-native';
 import { MotiView, AnimatePresence } from 'moti';
-import { useApp } from '../_layout';
+import { useApp, authFetch } from '../_layout';
 import { useRouter } from 'expo-router';
 import { X, Award, HelpCircle, Zap, Sparkles, Heart } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -60,7 +60,7 @@ export default function VortexGuess() {
     
     try {
       // Fetch details for clues
-      const res = await fetch(`${BASE_URL}/api/words/details`, {
+      const res = await authFetch(`${BASE_URL}/api/words/details`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ words: shuffled })
@@ -123,11 +123,11 @@ export default function VortexGuess() {
       const name = await AsyncStorage.getItem('userName') || 'Explorer';
       const avatar = await AsyncStorage.getItem('vortex_avatar') || '🚀';
 
-      await fetch(`${BASE_URL}/api/user/xp`, {
+      await authFetch(`${BASE_URL}/api/user/xp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          email, 
+        body: JSON.stringify({
+          email,
           xpToAdd: finalScore,
           name,
           picture: avatar

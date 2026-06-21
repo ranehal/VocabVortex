@@ -141,14 +141,14 @@ export default function Home() {
 }
 
 const styles = StyleSheet.create({
-  scrollContent: { paddingBottom: 150 },
-  viewContainer: { padding: 24, paddingTop: 40 },
-  wotdCard: { padding: 20, borderRadius: 25, marginBottom: 20, elevation: 5 },
+  scrollContent: { paddingBottom: 120 },
+  viewContainer: { padding: 16, paddingTop: 24 },
+  wotdCard: { padding: 16, borderRadius: 20, marginBottom: 16, elevation: 5 },
   wotdHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 5 },
   wotdLabel: { color: '#fff', fontSize: 10, fontWeight: '900', letterSpacing: 1 },
-  wotdText: { color: '#fff', fontSize: 32, fontWeight: '900', letterSpacing: -1 },
-  heroCard: { borderRadius: 32, padding: 32, marginBottom: 20 },
-  heroTitle: { fontSize: 36, fontWeight: '900', marginBottom: 24, textTransform: 'uppercase' },
+  wotdText: { color: '#fff', fontSize: 26, fontWeight: '900', letterSpacing: -1 },
+  heroCard: { borderRadius: 24, padding: 20, marginBottom: 16 },
+  heroTitle: { fontSize: 26, fontWeight: '900', marginBottom: 20, textTransform: 'uppercase' },
   levelRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 24 },
   levelBtn: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10 },
   levelBtnText: { fontSize: 10, fontWeight: '900' },

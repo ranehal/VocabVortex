@@ -1,9 +1,10 @@
 @echo off
-title VocabVortex - Full Stack Runner
+title VocabVortex - DEMO MODE (Tunnel + Server)
 set ROOT=%~dp0
 
 echo ==========================================
-echo   VOCABVORTEX FULL STACK LAUNCHER
+echo   VOCABVORTEX DEMO LAUNCHER
+echo   Multiple devices via Expo Go tunnel
 echo ==========================================
 echo.
 
@@ -29,15 +30,20 @@ if not exist "%ROOT%mobile\node_modules" (
     echo      OK
 )
 
-echo [3/3] Starting server + mobile...
+echo [3/3] Starting server + Expo with TUNNEL...
 start cmd /k "title VocabVortex-SERVER && cd /d "%ROOT%server" && npm run dev"
 timeout /t 3 /nobreak >nul
-start cmd /k "title VocabVortex-MOBILE && cd /d "%ROOT%mobile" && npx expo start --clear"
+start cmd /k "title VocabVortex-MOBILE (TUNNEL) && cd /d "%ROOT%mobile" && npx expo start --tunnel --clear"
 
 echo.
 echo ==========================================
-echo  VORTEX IS SPINNING UP!
-echo  Backend:  http://localhost:3000
-echo  Mobile:   http://localhost:8081
+echo  DEMO MODE ACTIVE!
+echo  Backend:      http://localhost:3000
+echo  Expo tunnel:  QR code will appear above
+echo.
+echo  STEPS FOR EACH DEVICE:
+echo  1. Install "Expo Go" from Play Store/App Store
+echo  2. Open Expo Go, scan the QR code shown above
+echo  3. Wait for bundle to load
 echo ==========================================
 pause
