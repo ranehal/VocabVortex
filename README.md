@@ -46,55 +46,55 @@ Traditional language learning apps rely on disconnected flashcards and repetitiv
   <tr>
     <td width="50%" align="center">
       <b>🚀 1. Discovery Vortex & Level Calibration</b><br><br>
-      <img src="screenshots/dash.png" width="300" alt="Discovery Dashboard" /><br><br>
+      <img src="screenshots/dash.webp" width="300" alt="Discovery Dashboard" /><br><br>
       <sub>Personalized home feed featuring Word of the Day, CEFR level selection (A1–C2, IELTS, TOEFL, GRE), smart suggestions, and mastery progression.</sub>
     </td>
     <td width="50%" align="center">
       <b>💡 2. Global Word Insight & Context Drills</b><br><br>
-      <img src="screenshots/feature1.png" width="300" alt="Word Insight Modal" /><br><br>
+      <img src="screenshots/feature1.webp" width="300" alt="Word Insight Modal" /><br><br>
       <sub>Instant modal triggered from anywhere in the app with phonetic pronunciation, localized Bengali definitions, and contextual grammatical drills.</sub>
     </td>
   </tr>
   <tr>
     <td width="50%" align="center">
       <b>🎬 3. Cinema Library & Subtitle Search</b><br><br>
-      <img src="screenshots/f4.png" width="300" alt="Cinema Library" /><br><br>
+      <img src="screenshots/f4.webp" width="300" alt="Cinema Library" /><br><br>
       <sub>Searchable film catalogue with external <code>.srt</code> ingestion, subtitle dialogue indexing, and instant movie scene exploration.</sub>
     </td>
     <td width="50%" align="center">
       <b>⏱️ 4. Synchronized Subtitle Explorer</b><br><br>
-      <img src="screenshots/f2a.png" width="300" alt="Movie Subtitle Dialogue" /><br><br>
+      <img src="screenshots/f2a.webp" width="300" alt="Movie Subtitle Dialogue" /><br><br>
       <sub>Time-scrubbed subtitle playback with dual English-Bengali translation, instant timestamp jump navigation, and in-dialogue word exploration.</sub>
     </td>
   </tr>
   <tr>
     <td width="50%" align="center">
       <b>📖 5. ReadFlow Literary Engine</b><br><br>
-      <img src="screenshots/f3.png" width="300" alt="ReadFlow Reader" /><br><br>
+      <img src="screenshots/f3.webp" width="300" alt="ReadFlow Reader" /><br><br>
       <sub>Distraction-free reading environment with preset literary classics, manual text injection, custom typography scaling, and real-time discovery queues.</sub>
     </td>
     <td width="50%" align="center">
       <b>🕹️ 6. The Arena: Gamified Arcade Hub</b><br><br>
-      <img src="screenshots/game_dash.png" width="300" alt="Arena Dashboard" /><br><br>
+      <img src="screenshots/game_dash.webp" width="300" alt="Arena Dashboard" /><br><br>
       <sub>Competitive training arcade with Daily Boss Challenges (+500 XP), daily streaks, season countdowns, and dynamic game modes.</sub>
     </td>
   </tr>
   <tr>
     <td width="50%" align="center">
       <b>⚡ 7. Word Match: Speed Association</b><br><br>
-      <img src="screenshots/g2.png" width="300" alt="Word Match Game" /><br><br>
+      <img src="screenshots/g2.webp" width="300" alt="Word Match Game" /><br><br>
       <sub>High-octane synonym and antonym connection challenge generated directly from your personal bookmarked mastery list.</sub>
     </td>
     <td width="50%" align="center">
       <b>🧩 8. Vortex Guess: Clue Deduction</b><br><br>
-      <img src="screenshots/game1.png" width="300" alt="Vortex Guess Game" /><br><br>
+      <img src="screenshots/game1.webp" width="300" alt="Vortex Guess Game" /><br><br>
       <sub>Context-driven vocabulary puzzle with heart-based life mechanics, letter length hints, and adaptive difficulty.</sub>
     </td>
   </tr>
   <tr>
     <td colspan="2" align="center">
       <b>🏆 9. Your Lab: Profile Analytics & Global Leaderboard</b><br><br>
-      <img src="screenshots/ldrbrd.png" width="320" alt="Lab and Leaderboard" /><br><br>
+      <img src="screenshots/ldrbrd.webp" width="320" alt="Lab and Leaderboard" /><br><br>
       <sub>Real-time XP tracking, mastery level badges ("Level 1 Prodigy"), accuracy percentage, and cross-platform global leaderboard rankings.</sub>
     </td>
   </tr>
